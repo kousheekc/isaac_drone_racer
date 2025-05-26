@@ -13,19 +13,19 @@
             "console": "integratedTerminal",
         },
         {
-            "name": "Python: Train Template-Isaac-Drone-Racer-v0 with skrl (PPO)",
+            "name": "Python: Train Isaac-Drone-Racer-v0 with skrl (PPO)",
             "type": "debugpy",
             "request": "launch",
-            "args" : ["--task", "Template-Isaac-Drone-Racer-v0", "--num_envs", "4096", "--headless", "--algorithm", "PPO"],
-            "program": "${workspaceFolder}/scripts/skrl/train.py",
+            "args" : ["--task", "Isaac-Drone-Racer-v0", "--num_envs", "4096", "--headless"],
+            "program": "${workspaceFolder}/scripts/rl/train.py",
             "console": "integratedTerminal",
         },
         {
-            "name": "Python: Play Template-Isaac-Drone-Racer-v0 with skrl (PPO)",
+            "name": "Python: Play Isaac-Drone-Racer-v0 with skrl (PPO)",
             "type": "debugpy",
             "request": "launch",
-            "args" : ["--task", "Template-Isaac-Drone-Racer-v0", "--num_envs", "32", "--algorithm", "PPO"],
-            "program": "${workspaceFolder}/scripts/skrl/play.py",
+            "args" : ["--task", "Isaac-Drone-Racer-v0", "--num_envs", "32"],
+            "program": "${workspaceFolder}/scripts/rl/play.py",
             "console": "integratedTerminal",
         },
         // For script execution inside a Docker
@@ -40,22 +40,22 @@
             }
         },
         {
-            "name": "Docker: Train Template-Isaac-Drone-Racer-v0 with skrl (PPO)",
+            "name": "Docker: Train Isaac-Drone-Racer-v0 with skrl (PPO)",
             "type": "debugpy",
             "request": "launch",
-            "args" : ["--task", "Template-Isaac-Drone-Racer-v0", "--num_envs", "4096", "--headless", "--algorithm", "PPO"],
-            "program": "${workspaceFolder}/scripts/skrl/train.py",
+            "args" : ["--task", "Isaac-Drone-Racer-v0", "--num_envs", "4096", "--headless"],
+            "program": "${workspaceFolder}/scripts/rl/train.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${env:PYTHONPATH}:${workspaceFolder}"
             },
         },
         {
-            "name": "Docker: Play Template-Isaac-Drone-Racer-v0 with skrl (PPO)",
+            "name": "Docker: Play Isaac-Drone-Racer-v0 with skrl (PPO)",
             "type": "debugpy",
             "request": "launch",
-            "args" : ["--task", "Template-Isaac-Drone-Racer-v0", "--num_envs", "32", "--algorithm", "PPO"],
-            "program": "${workspaceFolder}/scripts/skrl/play.py",
+            "args" : ["--task", "Isaac-Drone-Racer-v0", "--num_envs", "32"],
+            "program": "${workspaceFolder}/scripts/rl/play.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${env:PYTHONPATH}:${workspaceFolder}"

@@ -11,19 +11,33 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import torch
-from isaaclab.assets import Articulation
+from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.utils.math import wrap_to_pi
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
-def joint_pos_target_l2(env: ManagerBasedRLEnv, target: float, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Penalize joint position deviation from a target value."""
+def pos_error_tanh(
+    env: ManagerBasedRLEnv,
+    std: float,
+    command_name: str | None = None,
+    target_pos: list | None = None,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize asset pos from its target pos using L2 squared kernel."""
+
     # extract the used quantities (to enable type-hinting)
-    asset: Articulation = env.scene[asset_cfg.name]
-    # wrap the joint positions to (-pi, pi)
-    joint_pos = wrap_to_pi(asset.data.joint_pos[:, asset_cfg.joint_ids])
-    # compute the reward
-    return torch.sum(torch.square(joint_pos - target), dim=1)
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    if target_pos is None:
+        target_pos = env.command_manager.get_term(command_name).command
+        target_pos_tensor = target_pos[:, :3]
+    else:
+        target_pos_tensor = (
+            torch.tensor(target_pos, dtype=torch.float32, device=asset.device).repeat(env.num_envs, 1)
+            + env.scene.env_origins
+        )
+
+    distance = torch.norm(asset.data.root_pos_w - target_pos_tensor, dim=1)
+    return 1 - torch.tanh(distance / std)
