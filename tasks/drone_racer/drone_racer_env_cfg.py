@@ -35,7 +35,7 @@ from isaaclab_assets.robots.cartpole import CARTPOLE_CFG  # isort:skip
 
 
 @configclass
-class IsaacDroneRacerSceneCfg(InteractiveSceneCfg):
+class DroneRacerSceneCfg(InteractiveSceneCfg):
     """Configuration for a cart-pole scene."""
 
     # ground plane
@@ -159,9 +159,9 @@ class TerminationsCfg:
 
 
 @configclass
-class IsaacDroneRacerEnvCfg(ManagerBasedRLEnvCfg):
+class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: IsaacDroneRacerSceneCfg = IsaacDroneRacerSceneCfg(num_envs=4096, env_spacing=4.0)
+    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=4.0)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()

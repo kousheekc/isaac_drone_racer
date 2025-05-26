@@ -87,7 +87,7 @@ from isaaclab_tasks.utils import (
     parse_env_cfg,
 )
 
-import isaac_drone_racer.tasks  # noqa: F401
+import tasks  # noqa: F401
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()

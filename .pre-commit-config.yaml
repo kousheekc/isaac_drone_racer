@@ -43,10 +43,11 @@ repos:
       - id: codespell
         additional_dependencies:
         - tomli
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.315
-    hooks:
-    - id: pyright
+  # FIXME: Figure out why this is getting stuck under VPN.
+  # - repo: https://github.com/RobertCraigie/pyright-python
+  #   rev: v1.1.315
+  #   hooks:
+  #   - id: pyright
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.1
     hooks:

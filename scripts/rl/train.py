@@ -92,7 +92,7 @@ from isaaclab.utils.io import dump_pickle, dump_yaml
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-import isaac_drone_racer.tasks  # noqa: F401
+import tasks  # noqa: F401
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
