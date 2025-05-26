@@ -1,13 +1,14 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# Copyright (c) 2025, Kousheek Chakraborty
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
-
-"""Installation script for the 'isaac_drone_racer' python package."""
+#
+# This project uses the IsaacLab framework (https://github.com/isaac-sim/IsaacLab), 
+# which is licensed under the BSD-3-Clause License.
 
 import os
-import toml
 
+import toml
 from setuptools import setup
 
 # Obtain the extension data from the extension.toml file

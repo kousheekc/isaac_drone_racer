@@ -1,3 +1,11 @@
+# Copyright (c) 2025, Kousheek Chakraborty
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# This project uses the IsaacLab framework (https://github.com/isaac-sim/IsaacLab), 
+# which is licensed under the BSD-3-Clause License.
+
 import argparse
 
 from isaaclab.app import AppLauncher
@@ -46,12 +54,12 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
 import os
 import time
-import torch
 
+import gymnasium as gym
 import skrl
+import torch
 from packaging import version
 
 # check for minimum supported skrl version
@@ -68,14 +76,16 @@ if args_cli.ml_framework.startswith("torch"):
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
+import isaaclab_tasks  # noqa: F401
 from isaaclab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from isaaclab.utils.dict import print_dict
 from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
-
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
-
-import isaaclab_tasks  # noqa: F401
-from isaaclab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
+from isaaclab_tasks.utils import (
+    get_checkpoint_path,
+    load_cfg_from_registry,
+    parse_env_cfg,
+)
 
 import isaac_drone_racer.tasks  # noqa: F401
 

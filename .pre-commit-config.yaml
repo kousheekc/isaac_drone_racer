@@ -53,7 +53,7 @@ repos:
       - id: insert-license
         files: \.py$
         args:
-          - --remove-header    # Remove existing license headers. Useful when updating license.
+          # - --remove-header    # Remove existing license headers. Useful when updating license.
           - --license-filepath
           - .github/LICENSE_HEADER.txt
           - --use-current-year

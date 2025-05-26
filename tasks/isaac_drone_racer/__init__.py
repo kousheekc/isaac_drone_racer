@@ -1,16 +1,14 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# Copyright (c) 2025, Kousheek Chakraborty
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# This project uses the IsaacLab framework (https://github.com/isaac-sim/IsaacLab), 
+# which is licensed under the BSD-3-Clause License.
 
 import gymnasium as gym
 
 from . import agents
-
-##
-# Register Gym environments.
-##
-
 
 gym.register(
     id="Template-Isaac-Drone-Racer-v0",
