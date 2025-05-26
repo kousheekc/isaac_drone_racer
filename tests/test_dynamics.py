@@ -9,20 +9,19 @@
 import pytest
 import torch
 
-from dynamics import build_allocation_matrix_torch
+from dynamics import build_allocation_matrix
 
 
 @pytest.fixture
 def setup_allocation_matrix():
     num_envs = 2
-    L = torch.full((num_envs,), 0.1)
-    phi_deg = torch.tensor([[0, 90, 180, 270]]).repeat(num_envs, 1)
-    tilt_deg = torch.zeros((num_envs, 4))
-    spin_dir = torch.tensor([[1, -1, 1, -1]]).repeat(num_envs, 1)
-    k_T = torch.full((num_envs,), 1e-6)
-    k_D = torch.full((num_envs,), 1e-7)
+    arm_length = 0.1
+    phi_deg = [45, 135, 225, 315]
+    tilt_deg = [0, 0, 0, 0]
+    thrust_coef = 1e-6
+    drag_coef = 1e-7
 
-    A = build_allocation_matrix_torch(num_envs, L, phi_deg, tilt_deg, spin_dir, k_T, k_D)
+    A = build_allocation_matrix(num_envs, arm_length, phi_deg, tilt_deg, thrust_coef, drag_coef)
     return A, num_envs
 
 

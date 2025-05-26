@@ -6,4 +6,4 @@
 # This project uses the IsaacLab framework (https://github.com/isaac-sim/IsaacLab),
 # which is licensed under the BSD-3-Clause License.
 
-from .allocation import build_allocation_matrix_torch
+from .allocation import build_allocation_matrix

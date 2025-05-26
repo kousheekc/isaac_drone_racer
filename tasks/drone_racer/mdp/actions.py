@@ -15,6 +15,8 @@ from isaaclab.assets import Articulation
 from isaaclab.managers import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
 
+from dynamics import build_allocation_matrix
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
@@ -39,6 +41,15 @@ class ControlAction(ActionTerm):
         self._robot_mass = self._robot.root_physx_view.get_masses()[0].sum()
         self._gravity_magnitude = torch.tensor(self._env.sim.cfg.gravity, device=self.device).norm()
         self._robot_weight = (self._robot_mass * self._gravity_magnitude).item()
+
+        self._allocation_matrix = build_allocation_matrix(
+            self.num_envs,
+            self.cfg.arm_length,
+            self.cfg.phi_deg,
+            self.cfg.tilt_deg,
+            self.cfg.thrust_coef,
+            self.cfg.drag_coef,
+        ).to(self.device)
 
         self._raw_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._processed_actions = torch.zeros_like(self._raw_actions)
@@ -72,13 +83,13 @@ class ControlAction(ActionTerm):
 
     def process_actions(self, actions: torch.Tensor):
         self._raw_actions[:] = actions
-        self._processed_actions = self._raw_actions.clamp_(-1.0, 1.0)
+        clamped = self._raw_actions.clamp_(-1.0, 1.0)
+        thrusts_ref = self.cfg.thrust_to_weight * self._robot_weight * ((clamped + 1.0) / 2.0) / 4
+        self._processed_actions = torch.bmm(self._allocation_matrix, thrusts_ref.unsqueeze(-1)).squeeze(-1)
 
     def apply_actions(self):
-        self._thrust[:, 0, 2] = (
-            self.cfg.thrust_to_weight * self._robot_weight * (self._processed_actions[:, 0] + 1.0) / 2.0
-        )
-        self._moment[:, 0, :] = self.cfg.moment_scale * self._processed_actions[:, 1:]
+        self._thrust[:, 0, :] = self._processed_actions[:, :3]
+        self._moment[:, 0, :] = self._processed_actions[:, 3:]
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
 
     def reset(self, env_ids):
@@ -106,11 +117,18 @@ class ControlActionCfg(ActionTermCfg):
 
     class_type: type[ActionTerm] = ControlAction
     """ Class of the action term."""
+
     asset_name: str = "robot"
     """Name of the asset in the environment for which the commands are generated."""
-
     thrust_to_weight: float = 2.0
     """Scale factor for thrust to weight ratio. The thrust is computed as:"""
-
-    moment_scale: float = 0.01
-    """Scale factor for the moment applied to the drone body frame. The moment is computed as:"""
+    arm_length: float = 0.1
+    """Length of the arms of the drone in meters."""
+    phi_deg: list[float] = [45, 135, 225, 315]
+    """Motor angles in degrees."""
+    tilt_deg: list[float] = [0, 0, 0, 0]
+    """Motor tilt angles in degrees."""
+    thrust_coef: float = 1
+    """Thrust coefficient."""
+    drag_coef: float = 1e-7
+    """Drag torque coefficient."""

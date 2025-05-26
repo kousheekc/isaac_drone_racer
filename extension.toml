@@ -23,7 +23,7 @@ keywords = ["isaaclab", "drone", "rl"]
 # NOTE: Add additional dependencies here
 
 [[python.module]]
-name = "test"
+name = "isaac_drone_racer"
 
 [isaaclab_settings]
 # TODO: Uncomment and list any apt dependencies here.
