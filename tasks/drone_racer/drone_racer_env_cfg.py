@@ -38,7 +38,7 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
         track_config={
             "1": {"pos": (0.0, 0.0, 0.0), "yaw": 0.0},
             "2": {"pos": (4.0, 0.0, 1.0), "yaw": 0.0},
-            "3": {"pos": (4.0, 4.0, 0.0), "yaw": torch.pi / 4},
+            "3": {"pos": (4.0, 4.0, 0.0), "yaw": 3 / 4 * torch.pi},
             "4": {"pos": (0.0, 4.0, 0.5), "yaw": torch.pi},
         }
     )
@@ -93,15 +93,15 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (-1.0, 1.0),
-                "y": (-1.0, 1.0),
-                "z": (1.0, 3.0),
+                "x": (-1.0, -1.0),
+                "y": (0.0, 0.0),
+                "z": (1.0, 1.0),
                 "roll": (-0.0, 0.0),
                 "pitch": (-0.0, 0.0),
                 "yaw": (-0.0, 0.0),
             },
             "velocity_range": {
-                "x": (-0.0, 0.0),
+                "x": (5.0, 10.0),
                 "y": (-0.0, 0.0),
                 "z": (-0.0, 0.0),
                 "roll": (-0.0, 0.0),
@@ -127,11 +127,8 @@ class EventCfg:
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    target = mdp.UniformPosCommandWorldCfg(
-        asset_name="robot",
-        resampling_time_range=(1e9, 1e9),
-        debug_vis=True,
-        ranges=mdp.UniformPosCommandWorldCfg.Ranges(pos_x=(-1.0, 1.0), pos_y=(-1.0, 1.0), pos_z=(1.0, 3.0)),
+    target = mdp.GateTargetingCommandCfg(
+        asset_name="robot", track_name="track", resampling_time_range=(1e9, 1e9), debug_vis=True
     )
 
 
@@ -150,14 +147,13 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 3.0})
     flip = DoneTerm(func=mdp.flip, params={"angle": 60.0})
 
 
 @configclass
 class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=0.0)
+    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=10.0)
     # MDP settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -171,9 +167,9 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 1
-        self.episode_length_s = 5
+        self.episode_length_s = 60
         # viewer settings
         self.viewer.eye = (8.0, 0.0, 5.0)
         # simulation settings
-        self.sim.dt = 1 / 100
+        self.sim.dt = 1 / 500
         self.sim.render_interval = self.decimation

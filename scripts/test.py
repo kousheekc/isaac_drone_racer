@@ -31,6 +31,7 @@ def main():
     env_cfg.scene.num_envs = args_cli.num_envs
 
     env = ManagerBasedRLEnv(cfg=env_cfg)
+    env.reset()
 
     count = 0
 
