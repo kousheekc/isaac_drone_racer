@@ -7,7 +7,7 @@
 # which is licensed under the BSD-3-Clause License.
 
 import isaaclab.sim as sim_utils
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCollectionCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
@@ -18,6 +18,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 
 from . import mdp
+from .track_generator import generate_track
 
 from isaaclab_assets.robots.quadcopter import CRAZYFLIE_CFG  # isort:skip
 
@@ -30,6 +31,9 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
         prim_path="/World/Ground",
         spawn=sim_utils.GroundPlaneCfg(),
     )
+
+    # track
+    track: RigidObjectCollectionCfg = generate_track(4)
 
     # robot
     robot: ArticulationCfg = CRAZYFLIE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")

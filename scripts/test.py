@@ -29,7 +29,6 @@ from tasks.drone_racer.drone_racer_env_cfg import DroneRacerEnvCfg
 def main():
     env_cfg = DroneRacerEnvCfg()
     env_cfg.scene.num_envs = args_cli.num_envs
-    env_cfg.scene.env_spacing = 2.0
 
     env = ManagerBasedRLEnv(cfg=env_cfg)
 
