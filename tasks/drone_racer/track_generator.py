@@ -18,7 +18,7 @@ def generate_track(track_config: dict | None) -> RigidObjectCollectionCfg:
             f"gate_{gate_id}": RigidObjectCfg(
                 prim_path=f"/World/envs/env_.*/Gate_{gate_id}",
                 spawn=sim_utils.UsdFileCfg(
-                    usd_path="assets/gate.usd",
+                    usd_path="assets/gate/gate.usd",
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(
                         kinematic_enabled=True,
                         disable_gravity=True,
