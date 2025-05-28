@@ -7,6 +7,7 @@
 # which is licensed under the BSD-3-Clause License.
 
 import isaaclab.sim as sim_utils
+import torch
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCollectionCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -33,7 +34,14 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
     )
 
     # track
-    track: RigidObjectCollectionCfg = generate_track(4)
+    track: RigidObjectCollectionCfg = generate_track(
+        track_config={
+            "1": {"pos": (0.0, 0.0, 0.0), "yaw": 0.0},
+            "2": {"pos": (4.0, 0.0, 1.0), "yaw": 0.0},
+            "3": {"pos": (4.0, 4.0, 0.0), "yaw": torch.pi / 4},
+            "4": {"pos": (0.0, 4.0, 0.5), "yaw": torch.pi},
+        }
+    )
 
     # robot
     robot: ArticulationCfg = CRAZYFLIE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
