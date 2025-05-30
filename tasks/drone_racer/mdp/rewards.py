@@ -18,6 +18,50 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
+def pos_error_l2(
+    env: ManagerBasedRLEnv,
+    command_name: str,
+    target_pos: list | None = None,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize asset pos from its target pos using L2 squared kernel."""
+
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    if target_pos is None:
+        target_pos = env.command_manager.get_term(command_name).command
+        target_pos_tensor = target_pos[:, :3]
+    else:
+        target_pos_tensor = (
+            torch.tensor(target_pos, dtype=torch.float32, device=asset.device).repeat(env.num_envs, 1)
+            + env.scene.env_origins
+        )
+
+    # Compute sum of squared errors
+    return torch.sum(torch.square(asset.data.root_pos_w - target_pos_tensor), dim=1)
+
+
+def progress(
+    env: ManagerBasedRLEnv,
+    command_name: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize asset pos from its target pos using L2 squared kernel."""
+
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    target_pos = env.command_manager.get_term(command_name).command[:, :3]
+    previous_pos = env.command_manager.get_term(command_name).previous_pos
+    current_pos = asset.data.root_pos_w
+
+    progress = torch.sum(torch.square(previous_pos - target_pos), dim=1) - torch.sum(
+        torch.square(current_pos - target_pos), dim=1
+    )
+    return progress
+
+
 def pos_error_tanh(
     env: ManagerBasedRLEnv,
     std: float,
@@ -41,3 +85,10 @@ def pos_error_tanh(
 
     distance = torch.norm(asset.data.root_pos_w - target_pos_tensor, dim=1)
     return 1 - torch.tanh(distance / std)
+
+
+def ang_vel_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize base angular velocity using L2 squared kernel."""
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.sum(torch.square(asset.data.root_ang_vel_b), dim=1)

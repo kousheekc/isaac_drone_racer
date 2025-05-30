@@ -50,6 +50,7 @@ class GateTargetingCommand(CommandTerm):
         # -- commands: (x, y, z, qw, qx, qy, qz) in simulation world frame
         self.env_ids = torch.arange(self.num_envs, device=self.device)
         self.prev_robot_pos_w = self.robot.data.root_pos_w
+        self._gate_missed = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.next_gate_idx = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
         self.next_gate_w = torch.zeros(self.num_envs, 7, device=self.device)
 
@@ -70,6 +71,14 @@ class GateTargetingCommand(CommandTerm):
         The first three elements correspond to the position, followed by the quaternion orientation in (w, x, y, z).
         """
         return self.next_gate_w
+
+    @property
+    def gate_missed(self) -> torch.Tensor:
+        return self._gate_missed
+
+    @property
+    def previous_pos(self) -> torch.Tensor:
+        return self.prev_robot_pos_w
 
     """
     Implementation specific functions.
@@ -99,10 +108,15 @@ class GateTargetingCommand(CommandTerm):
         gate_passed = passed_gate_plane & (
             torch.all(torch.abs(self.robot.data.root_pos_w - self.next_gate_w[:, :3]) < (self.gate_size / 2), dim=1)
         )
+        self._gate_missed = passed_gate_plane & (
+            torch.any(torch.abs(self.robot.data.root_pos_w - self.next_gate_w[:, :3]) > (self.gate_size / 2), dim=1)
+        )
 
         # Update next gate target for the envs that passed the gate
         self.next_gate_idx[gate_passed] += 1
         self.next_gate_idx = self.next_gate_idx % self.num_gates
+
+        # TODO: maintain a flag to indicate if the drone airballed
 
         self.prev_robot_pos_w = self.robot.data.root_pos_w
 

@@ -14,14 +14,16 @@ from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 
 from . import mdp
 from .track_generator import generate_track
 
-from isaaclab_assets.robots.quadcopter import CRAZYFLIE_CFG  # isort:skip
+from assets.cf2x import CRAZYFLIE_CFG  # isort:skip
 
 
 @configclass
@@ -45,6 +47,8 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
 
     # robot
     robot: ArticulationCfg = CRAZYFLIE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+    collision_sensor: ContactSensorCfg = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", debug_vis=True)
 
     # lights
     dome_light = AssetBaseCfg(
@@ -101,12 +105,12 @@ class EventCfg:
                 "yaw": (-0.0, 0.0),
             },
             "velocity_range": {
-                "x": (5.0, 10.0),
-                "y": (-0.0, 0.0),
-                "z": (-0.0, 0.0),
-                "roll": (-0.0, 0.0),
-                "pitch": (-0.0, 0.0),
-                "yaw": (-0.0, 0.0),
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (0.0, 0.0),
             },
         },
     )
@@ -137,9 +141,8 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
-    pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"command_name": "target", "std": 2.0})
-    flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    progress = RewTerm(func=mdp.progress, weight=10.0, params={"command_name": "target"})
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.001)
 
 
 @configclass
@@ -147,13 +150,20 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    flip = DoneTerm(func=mdp.flip, params={"angle": 60.0})
+    # flip = DoneTerm(func=mdp.flip, params={"angle": 60.0})
+    out_of_bounds = DoneTerm(
+        func=mdp.out_of_bounds, params={"x_range": (-10.0, 10.0), "y_range": (-10.0, 10.0), "z_range": (0.0, 10.0)}
+    )
+    missed = DoneTerm(func=mdp.missed_gate, params={"command_name": "target"})
+    collision = DoneTerm(
+        func=mdp.illegal_contact, params={"sensor_cfg": SceneEntityCfg("collision_sensor"), "threshold": 0.01}
+    )
 
 
 @configclass
 class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=10.0)
+    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=0.0)
     # MDP settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -169,7 +179,8 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
         self.decimation = 1
         self.episode_length_s = 60
         # viewer settings
-        self.viewer.eye = (8.0, 0.0, 5.0)
+        self.viewer.eye = (-3.0, -7.0, 3.0)
+        self.viewer.lookat = (0.0, 0.0, 1.0)
         # simulation settings
         self.sim.dt = 1 / 500
         self.sim.render_interval = self.decimation

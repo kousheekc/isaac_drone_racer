@@ -29,7 +29,7 @@ def generate_track(track_config: dict | None) -> RigidObjectCollectionCfg:
                     pos=gate_config["pos"],
                     rot=math_utils.quat_from_euler_xyz(
                         torch.tensor(0.0), torch.tensor(0.0), torch.tensor(gate_config["yaw"])
-                    ),
+                    ).tolist(),
                 ),
             )
             for gate_id, gate_config in track_config.items()
