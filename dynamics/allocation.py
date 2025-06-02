@@ -9,78 +9,34 @@
 import torch
 
 
-def build_allocation_matrix(num_envs, arm_length, phi_deg, tilt_deg, thrust_coef, drag_coef):
+def generate_allocation_matrix(num_envs, arm_length, drag_coeff, device="cpu", dtype=torch.float32):
     """
-    Build actuator allocation matrices for multiple environments, assuming all share the same parameters.
+    Generates an allocation matrix for a quadrotor for multiple environments using PyTorch.
 
-    Args:
-        num_envs     : int, number of environments
-        arm_length   : float, length of arm
-        phi_deg      : list[float] of size 4, motor angle positions (degrees)
-        tilt_deg     : list[float] of size 4, motor tilt angles (degrees)
-        thrust_coef  : float, thrust coefficient
-        drag_coef    : float, drag torque coefficient
+    Parameters:
+    - num_envs (int): Number of environments
+    - arm_length (float): Distance from the center to the rotor
+    - drag_coeff (float): Rotor torque constant (kappa)
+    - device (str): 'cpu' or 'cuda'
+    - dtype (torch.dtype): Desired tensor dtype
 
     Returns:
-        A : (num_envs, 6, 4) allocation matrices
+    - allocation_matrix (torch.Tensor): Tensor of shape (num_envs, 4, 4)
     """
-    assert len(phi_deg) == 4 and len(tilt_deg) == 4, "Expected 4 motors"
+    sqrt2_inv = 1.0 / torch.sqrt(torch.tensor(2.0, dtype=dtype, device=device))
 
-    # Build identical tensors for each environment
-    phi_deg_tensor = torch.tensor(phi_deg).repeat(num_envs, 1)  # (num_envs, 4)
-    tilt_deg_tensor = torch.tensor(tilt_deg).repeat(num_envs, 1)  # (num_envs, 4)
-    arm_length_tensor = torch.tensor([arm_length] * num_envs)  # (num_envs,)
-    thrust_coef_tensor = torch.tensor([thrust_coef] * num_envs)  # (num_envs,)
-    drag_coef_tensor = torch.tensor([drag_coef] * num_envs)  # (num_envs,)
-
-    # Assume quadrotor with spin_dir [+1, -1, +1, -1] for CW/CCW
-    spin_dir_tensor = torch.tensor([1, -1, 1, -1]).repeat(num_envs, 1)  # (num_envs, 4)
-
-    return _build_allocation_matrix_from_tensors(
-        num_envs,
-        arm_length_tensor,
-        phi_deg_tensor,
-        tilt_deg_tensor,
-        spin_dir_tensor,
-        thrust_coef_tensor,
-        drag_coef_tensor,
+    # Define base allocation matrix
+    A = torch.tensor(
+        [
+            [1.0, 1.0, 1.0, 1.0],
+            [arm_length * sqrt2_inv, -arm_length * sqrt2_inv, -arm_length * sqrt2_inv, arm_length * sqrt2_inv],
+            [-arm_length * sqrt2_inv, -arm_length * sqrt2_inv, arm_length * sqrt2_inv, arm_length * sqrt2_inv],
+            [drag_coeff, -drag_coeff, drag_coeff, -drag_coeff],
+        ],
+        dtype=dtype,
+        device=device,
     )
 
+    allocation_matrix = A.unsqueeze(0).repeat(num_envs, 1, 1)
 
-def _build_allocation_matrix_from_tensors(num_envs, arm_length, phi_deg, tilt_deg, spin_dir, thrust_coef, drag_coef):
-    phi = torch.deg2rad(phi_deg)
-    tilt = torch.deg2rad(tilt_deg)
-
-    # sin/cos
-    sin_phi = torch.sin(phi)
-    cos_phi = torch.cos(phi)
-    sin_tilt = torch.sin(tilt)
-    cos_tilt = torch.cos(tilt)
-
-    # Position vectors
-    r_x = arm_length.view(num_envs, 1) * cos_phi
-    r_y = arm_length.view(num_envs, 1) * sin_phi
-    r_z = torch.zeros_like(r_x)
-    r = torch.stack([r_x, r_y, r_z], dim=2)
-
-    # Thrust directions
-    z_x = sin_tilt * cos_phi
-    z_y = sin_tilt * sin_phi
-    z_z = cos_tilt
-    z = torch.stack([z_x, z_y, z_z], dim=2)
-
-    # Thrust forces
-    force = thrust_coef.view(num_envs, 1, 1) * z
-
-    # Torques
-    tau_pos = torch.cross(r, force, dim=2)
-
-    # Torque from rotor drag
-    tau_drag = (spin_dir * drag_coef.view(num_envs, 1))[:, :, None] * z
-
-    # Total torque
-    torque = tau_pos + tau_drag
-
-    A = torch.cat([force.permute(0, 2, 1), torque.permute(0, 2, 1)], dim=1)
-
-    return A
+    return allocation_matrix

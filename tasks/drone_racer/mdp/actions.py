@@ -15,7 +15,7 @@ from isaaclab.assets import Articulation
 from isaaclab.managers import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
 
-from dynamics import build_allocation_matrix
+from dynamics import generate_allocation_matrix
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -42,12 +42,9 @@ class ControlAction(ActionTerm):
         self._gravity_magnitude = torch.tensor(self._env.sim.cfg.gravity, device=self.device).norm()
         self._robot_weight = (self._robot_mass * self._gravity_magnitude).item()
 
-        self._allocation_matrix = build_allocation_matrix(
+        self._allocation_matrix = generate_allocation_matrix(
             self.num_envs,
             self.cfg.arm_length,
-            self.cfg.phi_deg,
-            self.cfg.tilt_deg,
-            self.cfg.thrust_coef,
             self.cfg.drag_coef,
         ).to(self.device)
 
@@ -88,8 +85,8 @@ class ControlAction(ActionTerm):
         self._processed_actions = torch.bmm(self._allocation_matrix, thrusts_ref.unsqueeze(-1)).squeeze(-1)
 
     def apply_actions(self):
-        self._thrust[:, 0, :] = self._processed_actions[:, :3]
-        self._moment[:, 0, :] = self._processed_actions[:, 3:]
+        self._thrust[:, 0, 2] = self._processed_actions[:, 0]
+        self._moment[:, 0, :] = self._processed_actions[:, 1:]
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
 
     def reset(self, env_ids):
@@ -124,11 +121,5 @@ class ControlActionCfg(ActionTermCfg):
     """Scale factor for thrust to weight ratio. The thrust is computed as:"""
     arm_length: float = 0.1
     """Length of the arms of the drone in meters."""
-    phi_deg: list[float] = [45, 135, 225, 315]
-    """Motor angles in degrees."""
-    tilt_deg: list[float] = [0, 0, 0, 0]
-    """Motor tilt angles in degrees."""
-    thrust_coef: float = 1
-    """Thrust coefficient."""
-    drag_coef: float = 1e-7
+    drag_coef: float = 1e-2
     """Drag torque coefficient."""
