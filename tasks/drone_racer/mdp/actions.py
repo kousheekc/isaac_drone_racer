@@ -117,9 +117,9 @@ class ControlActionCfg(ActionTermCfg):
 
     asset_name: str = "robot"
     """Name of the asset in the environment for which the commands are generated."""
-    thrust_to_weight: float = 2.0
+    thrust_to_weight: float = 4.0
     """Scale factor for thrust to weight ratio. The thrust is computed as:"""
-    arm_length: float = 0.1
+    arm_length: float = 0.05
     """Length of the arms of the drone in meters."""
     drag_coef: float = 1e-2
     """Drag torque coefficient."""

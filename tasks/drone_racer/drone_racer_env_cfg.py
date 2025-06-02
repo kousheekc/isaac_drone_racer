@@ -74,8 +74,8 @@ class ObservationsCfg:
 
         position = ObsTerm(func=mdp.root_pos_w)
         attitude = ObsTerm(func=mdp.root_quat_w)
-        lin_vel = ObsTerm(func=mdp.root_lin_vel_w)
-        ang_vel = ObsTerm(func=mdp.root_ang_vel_w)
+        lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
+        ang_vel = ObsTerm(func=mdp.root_ang_vel_b)
         target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"command_name": "target"})
         actions = ObsTerm(func=mdp.last_action)
 
@@ -141,8 +141,10 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
-    progress = RewTerm(func=mdp.progress, weight=10.0, params={"command_name": "target"})
-    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.001)
+    # progress = RewTerm(func=mdp.progress, weight=1.0, params={"command_name": "target"})
+    pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"command_name": "target", "std": 2.0})
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-1.0)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
 
 
 @configclass
@@ -177,7 +179,7 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 1
-        self.episode_length_s = 60
+        self.episode_length_s = 10
         # viewer settings
         self.viewer.eye = (-3.0, -7.0, 3.0)
         self.viewer.lookat = (0.0, 0.0, 1.0)
