@@ -89,6 +89,16 @@ def progress(
     return progress
 
 
+def gate_passed(
+    env: ManagerBasedRLEnv,
+    command_name: str | None = None,
+) -> torch.Tensor:
+    """Terminate when the robot misses a gate."""
+    missed = (-1.0) * env.command_manager.get_term(command_name).gate_missed
+    passed = (1.0) * env.command_manager.get_term(command_name).gate_passed
+    return missed + passed
+
+
 def ang_vel_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Penalize base angular velocity using L2 squared kernel."""
     # extract the used quantities (to enable type-hinting)

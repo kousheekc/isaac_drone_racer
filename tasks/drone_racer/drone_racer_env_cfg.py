@@ -97,12 +97,12 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (-1.0, -1.0),
-                "y": (0.0, 0.0),
-                "z": (1.0, 1.0),
-                "roll": (-0.0, 0.0),
-                "pitch": (-0.0, 0.0),
-                "yaw": (-0.0, 0.0),
+                "x": (-1.5, -0.5),
+                "y": (-0.5, 0.5),
+                "z": (1.5, 0.5),
+                "roll": (-0.2, 0.2),
+                "pitch": (-0.2, 0.2),
+                "yaw": (-0.2, 0.2),
             },
             "velocity_range": {
                 "x": (0.0, 0.0),
@@ -116,15 +116,15 @@ class EventCfg:
     )
 
     # intervals
-    # push_robot = EventTerm(
-    #     func=mdp.apply_external_force_torque,
-    #     mode="interval",
-    #     interval_range_s=(0.1, 0.5),
-    #     params={
-    #         "force_range": (-0.01, 0.01),
-    #         "torque_range": (-0.005, 0.005),
-    #     },
-    # )
+    push_robot = EventTerm(
+        func=mdp.apply_external_force_torque,
+        mode="interval",
+        interval_range_s=(0.1, 0.5),
+        params={
+            "force_range": (-0.01, 0.01),
+            "torque_range": (-0.005, 0.005),
+        },
+    )
 
 
 @configclass
@@ -141,10 +141,9 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
-    # progress = RewTerm(func=mdp.progress, weight=1.0, params={"command_name": "target"})
-    pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"command_name": "target", "std": 2.0})
-    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-1.0)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.001)
+    progress = RewTerm(func=mdp.progress, weight=10.0, params={"command_name": "target"})
+    gate_passed = RewTerm(func=mdp.gate_passed, weight=100.0, params={"command_name": "target"})
 
 
 @configclass
@@ -152,11 +151,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    # flip = DoneTerm(func=mdp.flip, params={"angle": 60.0})
-    out_of_bounds = DoneTerm(
-        func=mdp.out_of_bounds, params={"x_range": (-10.0, 10.0), "y_range": (-10.0, 10.0), "z_range": (0.0, 10.0)}
-    )
-    missed = DoneTerm(func=mdp.missed_gate, params={"command_name": "target"})
+    flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 6.0})
     collision = DoneTerm(
         func=mdp.illegal_contact, params={"sensor_cfg": SceneEntityCfg("collision_sensor"), "threshold": 0.01}
     )
@@ -178,11 +173,11 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self) -> None:
         """Post initialization."""
         # general settings
-        self.decimation = 1
+        self.decimation = 2
         self.episode_length_s = 10
         # viewer settings
         self.viewer.eye = (-3.0, -7.0, 3.0)
         self.viewer.lookat = (0.0, 0.0, 1.0)
         # simulation settings
-        self.sim.dt = 1 / 500
+        self.sim.dt = 1 / 400
         self.sim.render_interval = self.decimation

@@ -51,6 +51,7 @@ class GateTargetingCommand(CommandTerm):
         self.env_ids = torch.arange(self.num_envs, device=self.device)
         self.prev_robot_pos_w = self.robot.data.root_pos_w
         self._gate_missed = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+        self._gate_passed = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.next_gate_idx = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
         self.next_gate_w = torch.zeros(self.num_envs, 7, device=self.device)
 
@@ -75,6 +76,10 @@ class GateTargetingCommand(CommandTerm):
     @property
     def gate_missed(self) -> torch.Tensor:
         return self._gate_missed
+
+    @property
+    def gate_passed(self) -> torch.Tensor:
+        return self._gate_passed
 
     @property
     def previous_pos(self) -> torch.Tensor:
@@ -105,18 +110,18 @@ class GateTargetingCommand(CommandTerm):
             self.robot.data.root_pos_w[:, 1] - self.next_gate_w[:, 1]
         ) * normal[:, 1]
         passed_gate_plane = (pos_old_projected < 0) & (pos_new_projected > 0)
-        gate_passed = passed_gate_plane & (
+
+        self._gate_passed = passed_gate_plane & (
             torch.all(torch.abs(self.robot.data.root_pos_w - self.next_gate_w[:, :3]) < (self.gate_size / 2), dim=1)
         )
+
         self._gate_missed = passed_gate_plane & (
             torch.any(torch.abs(self.robot.data.root_pos_w - self.next_gate_w[:, :3]) > (self.gate_size / 2), dim=1)
         )
 
         # Update next gate target for the envs that passed the gate
-        self.next_gate_idx[gate_passed] += 1
+        self.next_gate_idx[self._gate_passed] += 1
         self.next_gate_idx = self.next_gate_idx % self.num_gates
-
-        # TODO: maintain a flag to indicate if the drone airballed
 
         self.prev_robot_pos_w = self.robot.data.root_pos_w
 
@@ -170,125 +175,3 @@ class GateTargetingCommandCfg(CommandTermCfg):
     # Set the scale of the visualization markers to (0.1, 0.1, 0.1)
     target_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
     drone_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
-
-
-class UniformPosCommandWorld(CommandTerm):
-    """Command generator that generates a pose command from a uniform distribution."""
-
-    cfg: UniformPosCommandWorldCfg
-    """Configuration for the command generator."""
-
-    def __init__(self, cfg: UniformPosCommandWorldCfg, env: ManagerBasedEnv):
-        """Initialize the command generator class.
-
-        Args:
-            cfg: The configuration parameters for the command generator.
-            env: The environment object.
-        """
-        # initialize the base class
-        super().__init__(cfg, env)
-
-        # extract the robot and body index for which the command is generated
-        self.robot: Articulation = env.scene[cfg.asset_name]
-
-        # create buffers
-        # -- commands: (x, y, z, qw, qx, qy, qz) in simulation world frame
-        self.pose_command_w = torch.zeros(self.num_envs, 7, device=self.device)
-        self.pose_command_w[:, 3] = 1.0
-
-    def __str__(self) -> str:
-        msg = "UniformPosCommandWorld:\n"
-        msg += f"\tCommand dimension: {tuple(self.command.shape[1:])}\n"
-        msg += f"\tResampling time range: {self.cfg.resampling_time_range}\n"
-        return msg
-
-    """
-    Properties
-    """
-
-    @property
-    def command(self) -> torch.Tensor:
-        """The desired pose command. Shape is (num_envs, 7).
-
-        The first three elements correspond to the position, followed by the quaternion orientation in (w, x, y, z).
-        """
-        return self.pose_command_w
-
-    """
-    Implementation specific functions.
-    """
-
-    def _update_metrics(self):
-        pass
-
-    def _resample_command(self, env_ids: Sequence[int]):
-        r = torch.empty(len(env_ids), device=self.device)
-        self.pose_command_w[env_ids, 0] = r.uniform_(*self.cfg.ranges.pos_x) + self._env.scene.env_origins[env_ids, 0]
-        self.pose_command_w[env_ids, 1] = r.uniform_(*self.cfg.ranges.pos_y) + self._env.scene.env_origins[env_ids, 1]
-        self.pose_command_w[env_ids, 2] = r.uniform_(*self.cfg.ranges.pos_z) + self._env.scene.env_origins[env_ids, 2]
-
-    def _update_command(self):
-        pass
-
-    def _set_debug_vis_impl(self, debug_vis: bool):
-        # create markers if necessary for the first tome
-        if debug_vis:
-            if not hasattr(self, "goal_pose_visualizer"):
-                # -- goal pose
-                self.goal_pose_visualizer = VisualizationMarkers(self.cfg.goal_pose_visualizer_cfg)
-                # -- current body pose
-                self.current_pose_visualizer = VisualizationMarkers(self.cfg.current_pose_visualizer_cfg)
-            # set their visibility to true
-            self.goal_pose_visualizer.set_visibility(True)
-            self.current_pose_visualizer.set_visibility(True)
-        else:
-            if hasattr(self, "goal_pose_visualizer"):
-                self.goal_pose_visualizer.set_visibility(False)
-                self.current_pose_visualizer.set_visibility(False)
-
-    def _debug_vis_callback(self, event):
-        # check if robot is initialized
-        # note: this is needed in-case the robot is de-initialized. we can't access the data
-        if not self.robot.is_initialized:
-            return
-        # update the markers
-        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3], self.pose_command_w[:, 3:])
-        self.current_pose_visualizer.visualize(self.robot.data.root_pos_w, self.robot.data.root_quat_w)
-
-
-@configclass
-class UniformPosCommandWorldCfg(CommandTermCfg):
-    """Configuration for uniform pose command generator."""
-
-    class_type: type = UniformPosCommandWorld
-
-    asset_name: str = MISSING
-    """Name of the asset in the environment for which the commands are generated."""
-
-    @configclass
-    class Ranges:
-        """Uniform distribution ranges for the pose commands."""
-
-        pos_x: tuple[float, float] = MISSING
-        """Range for the x position (in m)."""
-
-        pos_y: tuple[float, float] = MISSING
-        """Range for the y position (in m)."""
-
-        pos_z: tuple[float, float] = MISSING
-        """Range for the z position (in m)."""
-
-    ranges: Ranges = MISSING
-    """Ranges for the commands."""
-
-    goal_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/goal_pose")
-    """The configuration for the goal pose visualization marker. Defaults to FRAME_MARKER_CFG."""
-
-    current_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(
-        prim_path="/Visuals/Command/body_pose"
-    )
-    """The configuration for the current pose visualization marker. Defaults to FRAME_MARKER_CFG."""
-
-    # Set the scale of the visualization markers to (0.1, 0.1, 0.1)
-    goal_pose_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
-    current_pose_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)

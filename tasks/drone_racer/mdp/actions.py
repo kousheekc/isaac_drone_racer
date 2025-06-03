@@ -49,7 +49,7 @@ class ControlAction(ActionTerm):
         ).to(self.device)
 
         self._raw_actions = torch.zeros(self.num_envs, 4, device=self.device)
-        self._processed_actions = torch.zeros_like(self._raw_actions)
+        self._processed_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
 
@@ -119,7 +119,7 @@ class ControlActionCfg(ActionTermCfg):
     """Name of the asset in the environment for which the commands are generated."""
     thrust_to_weight: float = 4.0
     """Scale factor for thrust to weight ratio. The thrust is computed as:"""
-    arm_length: float = 0.05
+    arm_length: float = 0.035
     """Length of the arms of the drone in meters."""
-    drag_coef: float = 1e-2
+    drag_coef: float = 1.5e-9
     """Drag torque coefficient."""
