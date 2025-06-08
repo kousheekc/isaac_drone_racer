@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 def reset_at_gate_uniform(
     env: ManagerBasedEnv,
     env_ids: torch.Tensor,
-    command_name: str,
+    gate_pose: torch.Tensor,
     pose_range: dict[str, tuple[float, float]],
     velocity_range: dict[str, tuple[float, float]],
     asset_cfg_name: str = "robot",
@@ -39,12 +39,7 @@ def reset_at_gate_uniform(
     ranges = torch.tensor(range_list, device=asset.device)
     rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=asset.device)
 
-    positions = (
-        root_states[:, 0:3]
-        + env.scene.env_origins[env_ids]
-        + env.command_manager.get_term(command_name).command[env_ids, :3]
-        + rand_samples[:, 0:3]
-    )
+    positions = root_states[:, 0:3] + env.scene.env_origins[env_ids] + gate_pose[env_ids, :3] + rand_samples[:, 0:3]
     orientations_delta = math_utils.quat_from_euler_xyz(rand_samples[:, 3], rand_samples[:, 4], rand_samples[:, 5])
     orientations = math_utils.quat_mul(root_states[:, 3:7], orientations_delta)
     # velocities

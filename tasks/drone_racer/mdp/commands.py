@@ -97,36 +97,65 @@ class GateTargetingCommand(CommandTerm):
         pass
 
     def _resample_command(self, env_ids: Sequence[int]):
-        self.next_gate_idx[env_ids] = torch.randint(
-            low=0, high=self.num_gates, size=(len(env_ids),), device=self.device
-        ).to(torch.int32)
-        next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx - 1]
-        next_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx - 1]
-        self.next_gate_w = torch.cat([next_gate_positions, next_gate_orientations], dim=1)
+        if self.cfg.randomise_start:
+            self.next_gate_idx[env_ids] = torch.randint(
+                low=0, high=self.num_gates, size=(len(env_ids),), device=self.device
+            ).to(torch.int32)
+            prev_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx - 1]
+            prev_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx - 1]
+            prev_gate_w = torch.cat([prev_gate_positions, prev_gate_orientations], dim=1)
 
-        # TODO: Implement this with event manager. Problem is that event manager resets before the command manager
-        reset_at_gate_uniform(
-            env=self._env,
-            env_ids=env_ids,
-            command_name="target",
-            pose_range={
-                "x": (-0.5, 0.5),
-                "y": (-0.5, 0.5),
-                "z": (-0.5, 0.5),
-                "roll": (-0.2, 0.2),
-                "pitch": (-0.2, 0.2),
-                "yaw": (-0.2, 0.2),
-            },
-            velocity_range={
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
-            },
-            asset_cfg_name=self.cfg.asset_name,
-        )
+            # TODO: Implement this with event manager. Problem is that event manager resets before the command manager
+            reset_at_gate_uniform(
+                env=self._env,
+                env_ids=env_ids,
+                gate_pose=prev_gate_w,
+                pose_range={
+                    "x": (-0.5, 0.5),
+                    "y": (-0.5, 0.5),
+                    "z": (-0.5, 0.5),
+                    "roll": (-0.2, 0.2),
+                    "pitch": (-0.2, 0.2),
+                    "yaw": (-0.2, 0.2),
+                },
+                velocity_range={
+                    "x": (0.0, 0.0),
+                    "y": (0.0, 0.0),
+                    "z": (0.0, 0.0),
+                    "roll": (0.0, 0.0),
+                    "pitch": (0.0, 0.0),
+                    "yaw": (0.0, 0.0),
+                },
+                asset_cfg_name=self.cfg.asset_name,
+            )
+        else:
+            self.next_gate_idx[env_ids] = 0
+            next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]
+            next_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx]
+            self.next_gate_w = torch.cat([next_gate_positions, next_gate_orientations], dim=1)
+
+            reset_at_gate_uniform(
+                env=self._env,
+                env_ids=env_ids,
+                gate_pose=self.next_gate_w,
+                pose_range={
+                    "x": (-2.5, -1.5),
+                    "y": (-0.5, 0.5),
+                    "z": (0.5, 1.5),
+                    "roll": (-0.2, 0.2),
+                    "pitch": (-0.2, 0.2),
+                    "yaw": (-0.2, 0.2),
+                },
+                velocity_range={
+                    "x": (0.0, 0.0),
+                    "y": (0.0, 0.0),
+                    "z": (0.0, 0.0),
+                    "roll": (0.0, 0.0),
+                    "pitch": (0.0, 0.0),
+                    "yaw": (0.0, 0.0),
+                },
+                asset_cfg_name=self.cfg.asset_name,
+            )
 
     def _update_command(self):
         next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]
@@ -195,6 +224,9 @@ class GateTargetingCommandCfg(CommandTermCfg):
 
     track_name: str = MISSING
     """Name of the track in the environment for which the commands are generated."""
+
+    randomise_start: bool = False
+    """If True, the starting gate is randomised at every reset."""
 
     gate_size: float = 1.5
     """Size of the gate in meters. This is used to determine if the drone has passed through the gate."""
