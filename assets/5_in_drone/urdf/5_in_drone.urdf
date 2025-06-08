@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="5_in_drone">
+  <link name="body">
+    <visual>
+      <geometry>
+        <mesh filename="package://meshes/base_link.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://meshes/base_link.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.003" iyy="0.003" izz="0.006"/>
+    </inertial>
+  </link>
+
+  <link name="prop1">
+    <visual>
+      <geometry>
+        <mesh filename="package://meshes/prop.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://meshes/prop.dae"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="prop2">
+    <visual>
+      <geometry>
+        <mesh filename="package://meshes/prop.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://meshes/prop.dae"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="prop3">
+    <visual>
+      <geometry>
+        <mesh filename="package://meshes/prop.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://meshes/prop.dae"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="prop4">
+    <visual>
+      <geometry>
+        <mesh filename="package://meshes/prop.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://meshes/prop.dae"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="m1_joint" type="revolute">
+    <parent link="body"/>
+    <child link="prop1"/>
+    <origin xyz="0.0883 0.0883 0.015" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit command_effort="80.0" current="32.0" effort="80.0" gear_velocity="8.5" lower="-0.7853985" upper="0.6108655" velocity="8.5"/> -->
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <joint name="m2_joint" type="revolute">
+      <parent link="body"/>
+      <child link="prop2"/>
+      <origin xyz="0.0883 -0.0883 0.015" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <!-- <limit command_effort="80.0" current="32.0" effort="80.0" gear_velocity="8.5" lower="-0.7853985" upper="0.6108655" velocity="8.5"/> -->
+      <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <joint name="m3_joint" type="revolute">
+      <parent link="body"/>
+      <child link="prop3"/>
+      <origin xyz="-0.0883 0.0883 0.015" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <!-- <limit command_effort="80.0" current="32.0" effort="80.0" gear_velocity="8.5" lower="-0.7853985" upper="0.6108655" velocity="8.5"/> -->
+      <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <joint name="m4_joint" type="revolute">
+      <parent link="body"/>
+      <child link="prop4"/>
+      <origin xyz="-0.0883 -0.0883 0.015" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <!-- <limit command_effort="80.0" current="32.0" effort="80.0" gear_velocity="8.5" lower="-0.7853985" upper="0.6108655" velocity="8.5"/> -->
+      <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+</robot>

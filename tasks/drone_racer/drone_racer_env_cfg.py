@@ -23,7 +23,7 @@ from isaaclab.utils import configclass
 from . import mdp
 from .track_generator import generate_track
 
-from assets.cf2x import CRAZYFLIE_CFG  # isort:skip
+from assets.five_in_drone import FIVE_IN_DRONE  # isort:skip
 
 
 @configclass
@@ -40,13 +40,13 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
         track_config={
             "1": {"pos": (0.0, 0.0, 0.0), "yaw": 0.0},
             "2": {"pos": (4.0, 0.0, 1.0), "yaw": 0.0},
-            "3": {"pos": (4.0, 4.0, 0.0), "yaw": 3 / 4 * torch.pi},
+            "3": {"pos": (4.0, 4.0, 0.0), "yaw": torch.pi},
             "4": {"pos": (0.0, 4.0, 0.5), "yaw": torch.pi},
         }
     )
 
     # robot
-    robot: ArticulationCfg = CRAZYFLIE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = FIVE_IN_DRONE.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     collision_sensor: ContactSensorCfg = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", debug_vis=True)
 
@@ -61,7 +61,9 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    control_action: mdp.ControlActionCfg = mdp.ControlActionCfg()
+    control_action: mdp.ControlActionCfg = mdp.ControlActionCfg(
+        thrust_to_weight=2.0, arm_length=0.035, drag_coef=1.5e-9
+    )
 
 
 @configclass
@@ -132,7 +134,7 @@ class CommandsCfg:
     """Command specifications for the MDP."""
 
     target = mdp.GateTargetingCommandCfg(
-        asset_name="robot", track_name="track", resampling_time_range=(1e9, 1e9), debug_vis=True
+        asset_name="robot", track_name="track", resampling_time_range=(1e9, 1e9), debug_vis=False
     )
 
 
@@ -176,8 +178,8 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
         self.decimation = 2
         self.episode_length_s = 10
         # viewer settings
-        self.viewer.eye = (-3.0, -7.0, 3.0)
-        self.viewer.lookat = (0.0, 0.0, 1.0)
+        self.viewer.eye = (-4.0, -4.0, 3.0)
+        self.viewer.lookat = (0.0, 0.0, 1.5)
         # simulation settings
         self.sim.dt = 1 / 400
         self.sim.render_interval = self.decimation
