@@ -39,9 +39,9 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
     track: RigidObjectCollectionCfg = generate_track(
         track_config={
             "1": {"pos": (0.0, 0.0, 0.0), "yaw": 0.0},
-            "2": {"pos": (4.0, 0.0, 1.0), "yaw": 0.0},
-            "3": {"pos": (4.0, 4.0, 0.0), "yaw": torch.pi},
-            "4": {"pos": (0.0, 4.0, 0.5), "yaw": torch.pi},
+            "2": {"pos": (6.0, 0.0, 1.0), "yaw": 0.0},
+            "3": {"pos": (6.0, 6.0, 0.0), "yaw": torch.pi},
+            "4": {"pos": (0.0, 6.0, 0.5), "yaw": torch.pi},
         }
     )
 
@@ -62,7 +62,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     control_action: mdp.ControlActionCfg = mdp.ControlActionCfg(
-        thrust_to_weight=2.0, arm_length=0.035, drag_coef=1.5e-9
+        thrust_to_weight=4.0, arm_length=0.125, drag_coef=2.3e-1
     )
 
 
@@ -94,28 +94,29 @@ class EventCfg:
     """Configuration for events."""
 
     # reset
-    reset_base = EventTerm(
-        func=mdp.reset_root_state_uniform,
-        mode="reset",
-        params={
-            "pose_range": {
-                "x": (-1.5, -0.5),
-                "y": (-0.5, 0.5),
-                "z": (1.5, 0.5),
-                "roll": (-0.2, 0.2),
-                "pitch": (-0.2, 0.2),
-                "yaw": (-0.2, 0.2),
-            },
-            "velocity_range": {
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
-            },
-        },
-    )
+    # reset_base = EventTerm(
+    #     func=mdp.reset_at_gate_uniform,
+    #     mode="reset",
+    #     params={
+    #         "command_name": "target",
+    #         "pose_range": {
+    #             "x": (-3.5, -1.5),
+    #             "y": (-0.5, 0.5),
+    #             "z": (1.5, 0.5),
+    #             "roll": (-0.2, 0.2),
+    #             "pitch": (-0.2, 0.2),
+    #             "yaw": (-0.2, 0.2),
+    #         },
+    #         "velocity_range": {
+    #             "x": (0.0, 0.0),
+    #             "y": (0.0, 0.0),
+    #             "z": (0.0, 0.0),
+    #             "roll": (0.0, 0.0),
+    #             "pitch": (0.0, 0.0),
+    #             "yaw": (0.0, 0.0),
+    #         },
+    #     },
+    # )
 
     # intervals
     push_robot = EventTerm(
@@ -144,8 +145,8 @@ class RewardsCfg:
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
     ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.001)
-    progress = RewTerm(func=mdp.progress, weight=10.0, params={"command_name": "target"})
-    gate_passed = RewTerm(func=mdp.gate_passed, weight=100.0, params={"command_name": "target"})
+    progress = RewTerm(func=mdp.progress, weight=20.0, params={"command_name": "target"})
+    gate_passed = RewTerm(func=mdp.gate_passed, weight=200.0, params={"command_name": "target"})
 
 
 @configclass
@@ -153,7 +154,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 6.0})
+    flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 8.0})
     collision = DoneTerm(
         func=mdp.illegal_contact, params={"sensor_cfg": SceneEntityCfg("collision_sensor"), "threshold": 0.01}
     )

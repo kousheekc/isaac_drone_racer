@@ -20,6 +20,8 @@ from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.markers.config import FRAME_MARKER_CFG
 from isaaclab.utils import configclass
 
+from .events import reset_at_gate_uniform
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
@@ -39,6 +41,8 @@ class GateTargetingCommand(CommandTerm):
         """
         # initialize the base class
         super().__init__(cfg, env)
+
+        self.cfg = cfg
 
         # extract the robot and track for which the command is generated
         self.robot: Articulation = env.scene[cfg.asset_name]
@@ -93,7 +97,36 @@ class GateTargetingCommand(CommandTerm):
         pass
 
     def _resample_command(self, env_ids: Sequence[int]):
-        self.next_gate_idx[env_ids] = 0
+        self.next_gate_idx[env_ids] = torch.randint(
+            low=0, high=self.num_gates, size=(len(env_ids),), device=self.device
+        ).to(torch.int32)
+        next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx - 1]
+        next_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx - 1]
+        self.next_gate_w = torch.cat([next_gate_positions, next_gate_orientations], dim=1)
+
+        # TODO: Implement this with event manager. Problem is that event manager resets before the command manager
+        reset_at_gate_uniform(
+            env=self._env,
+            env_ids=env_ids,
+            command_name="target",
+            pose_range={
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "z": (-0.5, 0.5),
+                "roll": (-0.2, 0.2),
+                "pitch": (-0.2, 0.2),
+                "yaw": (-0.2, 0.2),
+            },
+            velocity_range={
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (0.0, 0.0),
+            },
+            asset_cfg_name=self.cfg.asset_name,
+        )
 
     def _update_command(self):
         next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]
