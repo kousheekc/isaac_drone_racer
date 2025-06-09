@@ -62,7 +62,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     control_action: mdp.ControlActionCfg = mdp.ControlActionCfg(
-        thrust_to_weight=2.0, arm_length=0.125, drag_coef=2.3e-1
+        thrust_to_weight=4.0, arm_length=0.125, drag_coef=2.3e-1
     )
 
 
@@ -122,10 +122,10 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.apply_external_force_torque,
         mode="interval",
-        interval_range_s=(0.1, 0.5),
+        interval_range_s=(0.0, 0.2),
         params={
-            "force_range": (-0.01, 0.01),
-            "torque_range": (-0.005, 0.005),
+            "force_range": (-0.1, 0.1),
+            "torque_range": (-0.05, 0.05),
         },
     )
 

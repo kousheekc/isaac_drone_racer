@@ -20,7 +20,7 @@ from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.markers.config import FRAME_MARKER_CFG
 from isaaclab.utils import configclass
 
-from .events import reset_at_gate_uniform
+from .events import reset_after_prev_gate
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
@@ -97,65 +97,38 @@ class GateTargetingCommand(CommandTerm):
         pass
 
     def _resample_command(self, env_ids: Sequence[int]):
+        # Determine gate indices and poses based on whether to randomize start
         if self.cfg.randomise_start:
             self.next_gate_idx[env_ids] = torch.randint(
-                low=0, high=self.num_gates, size=(len(env_ids),), device=self.device
-            ).to(torch.int32)
-            prev_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx - 1]
-            prev_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx - 1]
-            prev_gate_w = torch.cat([prev_gate_positions, prev_gate_orientations], dim=1)
-
-            # TODO: Implement this with event manager. Problem is that event manager resets before the command manager
-            reset_at_gate_uniform(
-                env=self._env,
-                env_ids=env_ids,
-                gate_pose=prev_gate_w,
-                pose_range={
-                    "x": (-0.5, 0.5),
-                    "y": (-0.5, 0.5),
-                    "z": (-0.5, 0.5),
-                    "roll": (-0.2, 0.2),
-                    "pitch": (-0.2, 0.2),
-                    "yaw": (-0.2, 0.2),
-                },
-                velocity_range={
-                    "x": (0.0, 0.0),
-                    "y": (0.0, 0.0),
-                    "z": (0.0, 0.0),
-                    "roll": (0.0, 0.0),
-                    "pitch": (0.0, 0.0),
-                    "yaw": (0.0, 0.0),
-                },
-                asset_cfg_name=self.cfg.asset_name,
+                low=0, high=self.num_gates, size=(len(env_ids),), device=self.device, dtype=torch.int32
             )
         else:
-            self.next_gate_idx[env_ids] = 0
-            next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]
-            next_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx]
-            self.next_gate_w = torch.cat([next_gate_positions, next_gate_orientations], dim=1)
+            self.next_gate_idx[env_ids] = 1
 
-            reset_at_gate_uniform(
-                env=self._env,
-                env_ids=env_ids,
-                gate_pose=self.next_gate_w,
-                pose_range={
-                    "x": (-2.5, -1.5),
-                    "y": (-0.5, 0.5),
-                    "z": (0.5, 1.5),
-                    "roll": (-0.2, 0.2),
-                    "pitch": (-0.2, 0.2),
-                    "yaw": (-0.2, 0.2),
-                },
-                velocity_range={
-                    "x": (0.0, 0.0),
-                    "y": (0.0, 0.0),
-                    "z": (0.0, 0.0),
-                    "roll": (0.0, 0.0),
-                    "pitch": (0.0, 0.0),
-                    "yaw": (0.0, 0.0),
-                },
-                asset_cfg_name=self.cfg.asset_name,
-            )
+        gate_indices = self.next_gate_idx - 1
+        gate_positions = self.track.data.object_com_pos_w[self.env_ids, gate_indices]
+        gate_orientations = self.track.data.object_quat_w[self.env_ids, gate_indices]
+        gate_w = torch.cat([gate_positions, gate_orientations], dim=1)
+
+        reset_after_prev_gate(
+            env=self._env,
+            env_ids=env_ids,
+            gate_pose=gate_w,
+            pose_range={
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "z": (-0.5, 0.5),
+            },
+            velocity_range={
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (0.0, 0.0),
+            },
+            asset_cfg_name=self.cfg.asset_name,
+        )
 
     def _update_command(self):
         next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]

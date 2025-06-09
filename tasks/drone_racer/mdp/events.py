@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
 
-def reset_at_gate_uniform(
+def reset_after_prev_gate(
     env: ManagerBasedEnv,
     env_ids: torch.Tensor,
     gate_pose: torch.Tensor,
@@ -35,13 +35,19 @@ def reset_at_gate_uniform(
     root_states = asset.data.default_root_state[env_ids].clone()
 
     # poses
-    range_list = [pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
+    range_list = [pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z"]]
     ranges = torch.tensor(range_list, device=asset.device)
-    rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=asset.device)
+    rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 3), device=asset.device)
 
-    positions = root_states[:, 0:3] + env.scene.env_origins[env_ids] + gate_pose[env_ids, :3] + rand_samples[:, 0:3]
-    orientations_delta = math_utils.quat_from_euler_xyz(rand_samples[:, 3], rand_samples[:, 4], rand_samples[:, 5])
-    orientations = math_utils.quat_mul(root_states[:, 3:7], orientations_delta)
+    gate_pos = gate_pose[env_ids, :3]
+    gate_quat = gate_pose[env_ids, 3:7]
+    offset = torch.tensor([1.0, 0.0, 0.0], device=asset.device).expand(len(env_ids), 3)
+    offset_world = math_utils.quat_apply(gate_quat, offset)
+    pos_after_prev_gate = gate_pos + offset_world
+
+    positions = root_states[:, 0:3] + env.scene.env_origins[env_ids] + pos_after_prev_gate + rand_samples
+    orientations = math_utils.random_orientation(len(env_ids), device=asset.device)
+
     # velocities
     range_list = [velocity_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
     ranges = torch.tensor(range_list, device=asset.device)
