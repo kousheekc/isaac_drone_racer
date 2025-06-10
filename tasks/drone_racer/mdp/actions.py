@@ -15,7 +15,7 @@ from isaaclab.assets import Articulation
 from isaaclab.managers import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
 
-from dynamics import generate_allocation_matrix
+from dynamics import Allocation
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -38,20 +38,20 @@ class ControlAction(ActionTerm):
 
         self._robot: Articulation = env.scene[self.cfg.asset_name]
         self._body_id = self._robot.find_bodies("body")[0]
-        self._robot_mass = self._robot.root_physx_view.get_masses()[0].sum()
-        self._gravity_magnitude = torch.tensor(self._env.sim.cfg.gravity, device=self.device).norm()
-        self._robot_weight = (self._robot_mass * self._gravity_magnitude).item()
-
-        self._allocation_matrix = generate_allocation_matrix(
-            self.num_envs,
-            self.cfg.arm_length,
-            self.cfg.drag_coef,
-        ).to(self.device)
 
         self._raw_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._processed_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
+
+        self._allocation = Allocation(
+            num_envs=self.num_envs,
+            arm_length=self.cfg.arm_length,
+            thrust_coeff=self.cfg.thrust_coef,
+            drag_coeff=self.cfg.drag_coef,
+            device=self.device,
+            dtype=self._raw_actions.dtype,
+        )
 
     """
     Properties.
@@ -81,8 +81,10 @@ class ControlAction(ActionTerm):
     def process_actions(self, actions: torch.Tensor):
         self._raw_actions[:] = actions
         clamped = self._raw_actions.clamp_(-1.0, 1.0)
-        thrusts_ref = self.cfg.thrust_to_weight * self._robot_weight * ((clamped + 1.0) / 2.0) / 4
-        self._processed_actions = torch.bmm(self._allocation_matrix, thrusts_ref.unsqueeze(-1)).squeeze(-1)
+        mapped = (clamped + 1.0) / 2.0
+        omega_ref = self.cfg.omega_max * mapped
+        self._processed_actions = self._allocation.compute(omega_ref)
+        print(self._processed_actions)
 
     def apply_actions(self):
         self._thrust[:, 0, 2] = self._processed_actions[:, 0]
@@ -117,9 +119,15 @@ class ControlActionCfg(ActionTermCfg):
 
     asset_name: str = "robot"
     """Name of the asset in the environment for which the commands are generated."""
-    thrust_to_weight: float = 4.0
-    """Scale factor for thrust to weight ratio. The thrust is computed as:"""
     arm_length: float = 0.035
     """Length of the arms of the drone in meters."""
     drag_coef: float = 1.5e-9
     """Drag torque coefficient."""
+    thrust_coef: float = 2.25e-7
+    """Thrust coefficient.
+    Calculated with 5145 rad/s max angular velociy, thrust to weight: 4, mass: 0.6076 kg and gravity: 9.81 m/s^2.
+    thrust_coef = (4 * 0.6076 * 9.81) / (4 * 5145**2) = 2.25e-7."""
+    omega_max: float = 5145.0
+    """Maximum angular velocity of the drone motors in rad/s.
+    Calculated with 1950KV motor, with 6S LiPo battery with 4.2V per cell.
+    1950 * 6 * 4.2 = 49,140 RPM ~= 5145 rad/s."""
