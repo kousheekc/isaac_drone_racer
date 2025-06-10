@@ -37,11 +37,20 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
 
     # track
     track: RigidObjectCollectionCfg = generate_track(
+        # track_config={
+        #     "1": {"pos": (0.0, 0.0, 0.0), "yaw": 0.0},
+        #     "2": {"pos": (6.0, 0.0, 1.0), "yaw": 0.0},
+        #     "3": {"pos": (6.0, 6.0, 0.0), "yaw": torch.pi},
+        #     "4": {"pos": (0.0, 6.0, 0.5), "yaw": torch.pi},
+        # }
         track_config={
-            "1": {"pos": (0.0, 0.0, 0.0), "yaw": 0.0},
-            "2": {"pos": (6.0, 0.0, 1.0), "yaw": 0.0},
-            "3": {"pos": (6.0, 6.0, 0.0), "yaw": torch.pi},
-            "4": {"pos": (0.0, 6.0, 0.5), "yaw": torch.pi},
+            "1": {"pos": (0.0, 0.0, 1.0), "yaw": 0.0},
+            "2": {"pos": (10.0, 5.0, 0.0), "yaw": 0.0},
+            "3": {"pos": (10.0, -5.0, 0.0), "yaw": (5 / 4) * torch.pi},
+            "4": {"pos": (-5.0, -5.0, 2.5), "yaw": torch.pi},
+            "5": {"pos": (-5.0, -5.0, 0.0), "yaw": 0.0},
+            "6": {"pos": (5.0, 0.0, 0.0), "yaw": (1 / 2) * torch.pi},
+            "7": {"pos": (0.0, 5.0, 0.0), "yaw": torch.pi},
         }
     )
 
@@ -94,6 +103,7 @@ class EventCfg:
     """Configuration for events."""
 
     # reset
+    # TODO: Resetting base happens in the command reset for the moment, so this is commented out.
     # reset_base = EventTerm(
     #     func=mdp.reset_at_gate_uniform,
     #     mode="reset",
@@ -154,7 +164,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 8.0})
+    flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 20.0})
     collision = DoneTerm(
         func=mdp.illegal_contact, params={"sensor_cfg": SceneEntityCfg("collision_sensor"), "threshold": 0.01}
     )
@@ -176,8 +186,8 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self) -> None:
         """Post initialization."""
         # general settings
-        self.decimation = 2
-        self.episode_length_s = 10
+        self.decimation = 4
+        self.episode_length_s = 20
         # viewer settings
         self.viewer.eye = (-4.0, -4.0, 3.0)
         self.viewer.lookat = (0.0, 0.0, 1.5)
