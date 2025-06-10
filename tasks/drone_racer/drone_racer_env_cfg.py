@@ -103,17 +103,16 @@ class EventCfg:
     # reset
     # TODO: Resetting base happens in the command reset for the moment, so this is commented out.
     # reset_base = EventTerm(
-    #     func=mdp.reset_at_gate_uniform,
+    #     func=mdp.reset_root_state_uniform,
     #     mode="reset",
     #     params={
-    #         "command_name": "target",
     #         "pose_range": {
     #             "x": (-3.5, -1.5),
     #             "y": (-0.5, 0.5),
     #             "z": (1.5, 0.5),
-    #             "roll": (-0.2, 0.2),
-    #             "pitch": (-0.2, 0.2),
-    #             "yaw": (-0.2, 0.2),
+    #             "roll": (-0.0, 0.0),
+    #             "pitch": (-0.0, 0.0),
+    #             "yaw": (-0.0, 0.0),
     #         },
     #         "velocity_range": {
     #             "x": (0.0, 0.0),
@@ -154,7 +153,8 @@ class RewardsCfg:
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
     ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.001)
     progress = RewTerm(func=mdp.progress, weight=20.0, params={"command_name": "target"})
-    gate_passed = RewTerm(func=mdp.gate_passed, weight=200.0, params={"command_name": "target"})
+    gate_passed = RewTerm(func=mdp.gate_passed, weight=400.0, params={"command_name": "target"})
+    lookat_next = RewTerm(func=mdp.lookat_next_gate, weight=0.1, params={"command_name": "target", "std": 0.5})
 
 
 @configclass

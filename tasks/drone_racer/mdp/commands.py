@@ -97,38 +97,41 @@ class GateTargetingCommand(CommandTerm):
         pass
 
     def _resample_command(self, env_ids: Sequence[int]):
-        # Determine gate indices and poses based on whether to randomize start
-        if self.cfg.randomise_start:
-            self.next_gate_idx[env_ids] = torch.randint(
-                low=0, high=self.num_gates, size=(len(env_ids),), device=self.device, dtype=torch.int32
-            )
+        if self.cfg.randomise_start is None:
+            self.next_gate_idx[env_ids] = 0
+
         else:
-            self.next_gate_idx[env_ids] = 1
+            if self.cfg.randomise_start:
+                self.next_gate_idx[env_ids] = torch.randint(
+                    low=0, high=self.num_gates, size=(len(env_ids),), device=self.device, dtype=torch.int32
+                )
+            else:
+                self.next_gate_idx[env_ids] = 1
 
-        gate_indices = self.next_gate_idx - 1
-        gate_positions = self.track.data.object_com_pos_w[self.env_ids, gate_indices]
-        gate_orientations = self.track.data.object_quat_w[self.env_ids, gate_indices]
-        gate_w = torch.cat([gate_positions, gate_orientations], dim=1)
+            gate_indices = self.next_gate_idx - 1
+            gate_positions = self.track.data.object_com_pos_w[self.env_ids, gate_indices]
+            gate_orientations = self.track.data.object_quat_w[self.env_ids, gate_indices]
+            gate_w = torch.cat([gate_positions, gate_orientations], dim=1)
 
-        reset_after_prev_gate(
-            env=self._env,
-            env_ids=env_ids,
-            gate_pose=gate_w,
-            pose_range={
-                "x": (-0.5, 0.5),
-                "y": (-0.5, 0.5),
-                "z": (-0.5, 0.5),
-            },
-            velocity_range={
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
-            },
-            asset_cfg_name=self.cfg.asset_name,
-        )
+            reset_after_prev_gate(
+                env=self._env,
+                env_ids=env_ids,
+                gate_pose=gate_w,
+                pose_range={
+                    "x": (-0.5, 0.5),
+                    "y": (-0.5, 0.5),
+                    "z": (-0.5, 0.5),
+                },
+                velocity_range={
+                    "x": (0.0, 0.0),
+                    "y": (0.0, 0.0),
+                    "z": (0.0, 0.0),
+                    "roll": (0.0, 0.0),
+                    "pitch": (0.0, 0.0),
+                    "yaw": (0.0, 0.0),
+                },
+                asset_cfg_name=self.cfg.asset_name,
+            )
 
     def _update_command(self):
         next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]
@@ -198,7 +201,7 @@ class GateTargetingCommandCfg(CommandTermCfg):
     track_name: str = MISSING
     """Name of the track in the environment for which the commands are generated."""
 
-    randomise_start: bool = False
+    randomise_start: bool | None = None
     """If True, the starting gate is randomised at every reset."""
 
     gate_size: float = 1.5

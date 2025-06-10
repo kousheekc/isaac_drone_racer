@@ -84,7 +84,6 @@ class ControlAction(ActionTerm):
         mapped = (clamped + 1.0) / 2.0
         omega_ref = self.cfg.omega_max * mapped
         self._processed_actions = self._allocation.compute(omega_ref)
-        print(self._processed_actions)
 
     def apply_actions(self):
         self._thrust[:, 0, 2] = self._processed_actions[:, 0]

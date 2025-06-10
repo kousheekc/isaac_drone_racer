@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import isaaclab.utils.math as math_utils
 import torch
 from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
@@ -93,10 +94,37 @@ def gate_passed(
     env: ManagerBasedRLEnv,
     command_name: str | None = None,
 ) -> torch.Tensor:
-    """Terminate when the robot misses a gate."""
+    """Reward for passing a gate."""
     missed = (-1.0) * env.command_manager.get_term(command_name).gate_missed
     passed = (1.0) * env.command_manager.get_term(command_name).gate_passed
     return missed + passed
+
+
+def lookat_next_gate(
+    env: ManagerBasedRLEnv,
+    std: float,
+    command_name: str | None = None,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Reward for looking at the next gate."""
+
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    drone_pos = asset.data.root_pos_w
+    drone_att = asset.data.root_quat_w
+    next_gate_pos = env.command_manager.get_term(command_name).command[:, :3]
+
+    vec_to_gate = next_gate_pos - drone_pos
+    vec_to_gate = math_utils.normalize(vec_to_gate)
+
+    x_axis = torch.tensor([1.0, 0.0, 0.0], device=asset.device).expand(env.num_envs, 3)
+    drone_x_axis = math_utils.quat_apply(drone_att, x_axis)
+    drone_x_axis = math_utils.normalize(drone_x_axis)
+
+    dot = (drone_x_axis * vec_to_gate).sum(dim=1).clamp(-1.0, 1.0)
+    angle = torch.acos(dot)
+    return torch.exp(-angle / std)
 
 
 def ang_vel_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
