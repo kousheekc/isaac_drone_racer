@@ -17,7 +17,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg
+from isaaclab.sensors import ContactSensorCfg, ImuCfg, TiledCameraCfg
 from isaaclab.utils import configclass
 
 from . import mdp
@@ -57,7 +57,19 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
     # robot
     robot: ArticulationCfg = FIVE_IN_DRONE.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
+    # sensors
     collision_sensor: ContactSensorCfg = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", debug_vis=True)
+    imu = ImuCfg(prim_path="{ENV_REGEX_NS}/Robot/body", debug_vis=False)
+    tiled_camera: TiledCameraCfg = TiledCameraCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base",
+        offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
+        data_types=["rgb"],
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+        ),
+        width=100,
+        height=100,
+    )
 
     # lights
     dome_light = AssetBaseCfg(
@@ -92,8 +104,22 @@ class ObservationsCfg:
             self.enable_corruption = False
             self.concatenate_terms = True
 
+    @configclass
+    class CriticCfg(ObsGroup):
+        """Observations for critic group."""
+
+        image = ObsTerm(func=mdp.image)
+        imu_ang_vel = ObsTerm(func=mdp.imu_ang_vel)
+        imu_lin_acc = ObsTerm(func=mdp.imu_lin_acc)
+        imu_att = ObsTerm(func=mdp.imu_orientation)
+
+        def __post_init__(self) -> None:
+            self.enable_corruption = False
+            self.concatenate_terms = False
+
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+    critic: CriticCfg = CriticCfg()
 
 
 @configclass
