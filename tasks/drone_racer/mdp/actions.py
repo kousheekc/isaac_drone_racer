@@ -16,6 +16,7 @@ from isaaclab.managers import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
 
 from dynamics import Allocation
+from utils.logger import log
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -39,6 +40,7 @@ class ControlAction(ActionTerm):
         self._robot: Articulation = env.scene[self.cfg.asset_name]
         self._body_id = self._robot.find_bodies("body")[0]
 
+        self._elapsed_time = torch.zeros(self.num_envs, 1, device=self.device)
         self._raw_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._processed_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
@@ -79,16 +81,23 @@ class ControlAction(ActionTerm):
     """
 
     def process_actions(self, actions: torch.Tensor):
+
         self._raw_actions[:] = actions
         clamped = self._raw_actions.clamp_(-1.0, 1.0)
         mapped = (clamped + 1.0) / 2.0
         omega_ref = self.cfg.omega_max * mapped
         self._processed_actions = self._allocation.compute(omega_ref)
 
+        log(self._env, ["a1", "a2", "a3", "a4"], self._raw_actions)
+        log(self._env, ["t1", "t2", "t3", "t4"], omega_ref)
+
     def apply_actions(self):
         self._thrust[:, 0, 2] = self._processed_actions[:, 0]
         self._moment[:, 0, :] = self._processed_actions[:, 1:]
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
+
+        self._elapsed_time += self._env.physics_dt
+        log(self._env, ["time"], self._elapsed_time)
 
     def reset(self, env_ids):
         if env_ids is None or len(env_ids) == self.num_envs:
@@ -96,6 +105,7 @@ class ControlAction(ActionTerm):
 
         self._raw_actions[env_ids] = 0.0
         self._processed_actions[env_ids] = 0.0
+        self._elapsed_time[env_ids] = 0.0
 
         self._robot.reset(env_ids)
         joint_pos = self._robot.data.default_joint_pos[env_ids]

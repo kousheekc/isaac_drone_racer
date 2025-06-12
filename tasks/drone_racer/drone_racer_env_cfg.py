@@ -37,12 +37,6 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
 
     # track
     track: RigidObjectCollectionCfg = generate_track(
-        # track_config={
-        #     "1": {"pos": (0.0, 0.0, 0.0), "yaw": 0.0},
-        #     "2": {"pos": (6.0, 0.0, 1.0), "yaw": 0.0},
-        #     "3": {"pos": (6.0, 6.0, 0.0), "yaw": torch.pi},
-        #     "4": {"pos": (0.0, 6.0, 0.5), "yaw": torch.pi},
-        # }
         track_config={
             "1": {"pos": (0.0, 0.0, 1.0), "yaw": 0.0},
             "2": {"pos": (10.0, 5.0, 0.0), "yaw": 0.0},
@@ -61,14 +55,12 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
     collision_sensor: ContactSensorCfg = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", debug_vis=True)
     imu = ImuCfg(prim_path="{ENV_REGEX_NS}/Robot/body", debug_vis=False)
     tiled_camera: TiledCameraCfg = TiledCameraCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/base",
-        offset=TiledCameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
+        prim_path="{ENV_REGEX_NS}/Robot/body/camera",
+        offset=TiledCameraCfg.OffsetCfg(pos=(0.14, 0.0, 0.05), rot=(1.0, 0.0, 0.0, 0.0), convention="world"),
         data_types=["rgb"],
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
-        ),
-        width=100,
-        height=100,
+        spawn=sim_utils.FisheyeCameraCfg(),
+        width=1000,
+        height=1000,
     )
 
     # lights
@@ -180,7 +172,7 @@ class RewardsCfg:
     ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.001)
     progress = RewTerm(func=mdp.progress, weight=20.0, params={"command_name": "target"})
     gate_passed = RewTerm(func=mdp.gate_passed, weight=400.0, params={"command_name": "target"})
-    lookat_next = RewTerm(func=mdp.lookat_next_gate, weight=0.1, params={"command_name": "target", "std": 0.5})
+    lookat_next = RewTerm(func=mdp.lookat_next_gate, weight=1.0, params={"command_name": "target", "std": 0.5})
 
 
 @configclass

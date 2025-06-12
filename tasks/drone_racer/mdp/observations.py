@@ -15,6 +15,8 @@ import torch
 from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
 
+from utils.logger import log
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
@@ -23,6 +25,7 @@ def root_lin_vel_b(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnti
     """Asset root linear velocity in the body frame."""
     asset: RigidObject = env.scene[asset_cfg.name]
     lin_vel = asset.data.root_lin_vel_b
+    log(env, ["vx", "vy", "vz"], lin_vel)
     return lin_vel
 
 
@@ -30,7 +33,21 @@ def root_ang_vel_b(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnti
     """Asset root angular velocity in the body frame."""
     asset: RigidObject = env.scene[asset_cfg.name]
     ang_vel = asset.data.root_ang_vel_b
+    log(env, ["wx", "wy", "wz"], ang_vel)
     return ang_vel
+
+
+def root_quat_w(
+    env: ManagerBasedRLEnv, make_quat_unique: bool = False, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Asset root orientation (w, x, y, z) in the environment frame."""
+
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    quat = asset.data.root_quat_w
+    log(env, ["qw", "qx", "qy", "qz"], quat)
+    return math_utils.quat_unique(quat) if make_quat_unique else quat
 
 
 def root_rotmat_w(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
@@ -40,6 +57,7 @@ def root_rotmat_w(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntit
     quat = asset.data.root_quat_w
     rotmat = math_utils.matrix_from_quat(quat)
     flat_rotmat = rotmat.view(-1, 9)
+    log(env, ["r11", "r12", "r13", "r21", "r22", "r23", "r31", "r32", "r33"], flat_rotmat)
     return flat_rotmat
 
 
@@ -47,6 +65,7 @@ def root_pos_w(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCf
     """Asset root position in the world frame."""
     asset: RigidObject = env.scene[asset_cfg.name]
     position = asset.data.root_pos_w
+    log(env, ["px", "py", "pz"], position)
     return position
 
 

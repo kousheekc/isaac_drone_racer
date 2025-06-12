@@ -47,6 +47,7 @@ parser.add_argument(
     choices=["RayTracedLighting", "PathTracing"],
     help="Renderer to use.",
 )
+parser.add_argument("--log", type=int, default=None, help="Log the observations and metrics.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -95,6 +96,7 @@ from isaaclab_tasks.utils import (
 )
 
 import tasks  # noqa: F401
+from utils.logger import CSVLogger
 
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
@@ -105,6 +107,9 @@ def main():
     # configure the ML framework into the global skrl variable
     if args_cli.ml_framework.startswith("jax"):
         skrl.config.jax.backend = "jax" if args_cli.ml_framework == "jax" else "numpy"
+
+    if args_cli.log and args_cli.num_envs > 1:
+        raise ValueError("Logging is only supported for a single agent. Set --num_envs to 1.")
 
     # parse configuration
     env_cfg = parse_env_cfg(
@@ -146,6 +151,9 @@ def main():
     except AttributeError:
         dt = env.unwrapped.step_dt
 
+    if args_cli.log:
+        logger = CSVLogger(log_dir)
+
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
@@ -176,6 +184,7 @@ def main():
     # reset environment
     obs, _ = env.reset()
     timestep = 0
+    num_episode = 0
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
@@ -191,7 +200,7 @@ def main():
             else:
                 actions = outputs[-1].get("mean_actions", outputs[0])
             # env stepping
-            obs, _, _, _, _ = env.step(actions)
+            obs, rew, terminated, truncated, info = env.step(actions)
         if args_cli.video:
             timestep += 1
             # exit the play loop after recording one video
@@ -202,6 +211,14 @@ def main():
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
+
+        if args_cli.log:
+            if truncated or terminated:
+                num_episode += 1
+                logger.save()
+                if num_episode >= args_cli.log:
+                    break
+            logger.log(info["metrics"])
 
     # close the simulator
     env.close()

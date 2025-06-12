@@ -22,6 +22,12 @@ from isaaclab.utils import configclass
 
 from .events import reset_after_prev_gate
 
+# from isaaclab.managers import SceneEntityCfg
+# from isaaclab.sensors import TiledCamera
+# import os
+# import torchvision
+
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
@@ -134,6 +140,18 @@ class GateTargetingCommand(CommandTerm):
             )
 
     def _update_command(self):
+        # sensor_cfg: SceneEntityCfg = SceneEntityCfg("tiled_camera")
+        # sensor: TiledCamera = self._env.scene.sensors[sensor_cfg.name]
+        # images = sensor.data.output["rgb"]
+        # save_dir = "/home/kousheek/Dev/saxion/isaac_drone_racer/tmp/drone_images"
+        # os.makedirs(save_dir, exist_ok=True)
+        # image_idx = getattr(self, "_image_idx", 0)
+        # image = images[0].cpu().byte()
+        # image_path = os.path.join(save_dir, f"camera_image_{image_idx:05d}.png")
+        # torchvision.utils.save_image(image.permute(2, 0, 1).float() / 255.0, image_path)
+        # print(f"Saved image to {image_path}")
+        # self._image_idx = image_idx + 1
+
         next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]
         next_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx]
         self.next_gate_w = torch.cat([next_gate_positions, next_gate_orientations], dim=1)
@@ -215,4 +233,4 @@ class GateTargetingCommandCfg(CommandTermCfg):
 
     # Set the scale of the visualization markers to (0.1, 0.1, 0.1)
     target_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
-    drone_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+    drone_visualizer_cfg.markers["frame"].scale = (0.01, 0.01, 0.01)
