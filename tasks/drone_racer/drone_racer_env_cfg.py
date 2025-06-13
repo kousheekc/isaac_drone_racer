@@ -120,28 +120,28 @@ class EventCfg:
 
     # reset
     # TODO: Resetting base happens in the command reset for the moment, so this is commented out.
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (-3.5, -1.5),
-    #             "y": (-0.5, 0.5),
-    #             "z": (1.5, 0.5),
-    #             "roll": (-0.0, 0.0),
-    #             "pitch": (-0.0, 0.0),
-    #             "yaw": (-0.0, 0.0),
-    #         },
-    #         "velocity_range": {
-    #             "x": (0.0, 0.0),
-    #             "y": (0.0, 0.0),
-    #             "z": (0.0, 0.0),
-    #             "roll": (0.0, 0.0),
-    #             "pitch": (0.0, 0.0),
-    #             "yaw": (0.0, 0.0),
-    #         },
-    #     },
-    # )
+    reset_base = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {
+                "x": (-3.5, -1.5),
+                "y": (-0.5, 0.5),
+                "z": (1.5, 0.5),
+                "roll": (-0.0, 0.0),
+                "pitch": (-0.0, 0.0),
+                "yaw": (-0.0, 0.0),
+            },
+            "velocity_range": {
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (0.0, 0.0),
+            },
+        },
+    )
 
     # intervals
     push_robot = EventTerm(
@@ -160,7 +160,12 @@ class CommandsCfg:
     """Command specifications for the MDP."""
 
     target = mdp.GateTargetingCommandCfg(
-        asset_name="robot", track_name="track", randomise_start=True, resampling_time_range=(1e9, 1e9), debug_vis=True
+        asset_name="robot",
+        track_name="track",
+        randomise_start=None,
+        record_fpv=True,
+        resampling_time_range=(1e9, 1e9),
+        debug_vis=True,
     )
 
 
@@ -205,8 +210,8 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
         self.decimation = 4
         self.episode_length_s = 20
         # viewer settings
-        self.viewer.eye = (-4.0, -4.0, 3.0)
-        self.viewer.lookat = (0.0, 0.0, 1.5)
+        self.viewer.eye = (-10.0, -10.0, 10.0)
+        self.viewer.lookat = (0.0, 0.0, 0.0)
         # simulation settings
         self.sim.dt = 1 / 400
         self.sim.render_interval = self.decimation

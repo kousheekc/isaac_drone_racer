@@ -12,21 +12,17 @@ from collections.abc import Sequence
 from dataclasses import MISSING
 from typing import TYPE_CHECKING
 
+import cv2
 import isaaclab.utils.math as math_utils
 import torch
 from isaaclab.assets import Articulation, RigidObjectCollection
-from isaaclab.managers import CommandTerm, CommandTermCfg
+from isaaclab.managers import CommandTerm, CommandTermCfg, SceneEntityCfg
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.markers.config import FRAME_MARKER_CFG
+from isaaclab.sensors import TiledCamera
 from isaaclab.utils import configclass
 
 from .events import reset_after_prev_gate
-
-# from isaaclab.managers import SceneEntityCfg
-# from isaaclab.sensors import TiledCamera
-# import os
-# import torchvision
-
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
@@ -49,6 +45,13 @@ class GateTargetingCommand(CommandTerm):
         super().__init__(cfg, env)
 
         self.cfg = cfg
+
+        # FPV video recording
+        if self.cfg.record_fpv:
+            self.video_id = 0
+            self.fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            self.sensor_cfg: SceneEntityCfg = SceneEntityCfg("tiled_camera")
+            self.sensor: TiledCamera = self._env.scene.sensors[self.sensor_cfg.name]
 
         # extract the robot and track for which the command is generated
         self.robot: Articulation = env.scene[cfg.asset_name]
@@ -103,6 +106,13 @@ class GateTargetingCommand(CommandTerm):
         pass
 
     def _resample_command(self, env_ids: Sequence[int]):
+        # Release and reinitialize video writer only after the first iteration
+        if hasattr(self, "out"):
+            self.out.release()
+            print(f"FPV video saved as fpv_{self.video_id}.mp4")
+            self.video_id += 1
+        self.out = cv2.VideoWriter(f"fpv_{self.video_id}.mp4", self.fourcc, 100, (1000, 1000))
+
         if self.cfg.randomise_start is None:
             self.next_gate_idx[env_ids] = 0
 
@@ -140,17 +150,10 @@ class GateTargetingCommand(CommandTerm):
             )
 
     def _update_command(self):
-        # sensor_cfg: SceneEntityCfg = SceneEntityCfg("tiled_camera")
-        # sensor: TiledCamera = self._env.scene.sensors[sensor_cfg.name]
-        # images = sensor.data.output["rgb"]
-        # save_dir = "/home/kousheek/Dev/saxion/isaac_drone_racer/tmp/drone_images"
-        # os.makedirs(save_dir, exist_ok=True)
-        # image_idx = getattr(self, "_image_idx", 0)
-        # image = images[0].cpu().byte()
-        # image_path = os.path.join(save_dir, f"camera_image_{image_idx:05d}.png")
-        # torchvision.utils.save_image(image.permute(2, 0, 1).float() / 255.0, image_path)
-        # print(f"Saved image to {image_path}")
-        # self._image_idx = image_idx + 1
+        if self.cfg.record_fpv:
+            image = self.sensor.data.output["rgb"][0].cpu().numpy()
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            self.out.write(image)
 
         next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]
         next_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx]
@@ -221,6 +224,9 @@ class GateTargetingCommandCfg(CommandTermCfg):
 
     randomise_start: bool | None = None
     """If True, the starting gate is randomised at every reset."""
+
+    record_fpv: bool = False
+    """If True, the first-person view (FPV) camera is recorded during the simulation."""
 
     gate_size: float = 1.5
     """Size of the gate in meters. This is used to determine if the drone has passed through the gate."""
