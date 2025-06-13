@@ -15,7 +15,7 @@ from isaaclab.assets import Articulation
 from isaaclab.managers import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
 
-from dynamics import Allocation
+from dynamics import Allocation, Motor
 from utils.logger import log
 
 if TYPE_CHECKING:
@@ -54,6 +54,17 @@ class ControlAction(ActionTerm):
             device=self.device,
             dtype=self._raw_actions.dtype,
         )
+        self._motor = Motor(
+            num_envs=self.num_envs,
+            taus=self.cfg.taus,
+            init=self.cfg.init,
+            max_rate=self.cfg.max_rate,
+            min_rate=self.cfg.min_rate,
+            dt=env.physics_dt,
+            use=self.cfg.use_motor_model,
+            device=self.device,
+            dtype=self._raw_actions.dtype,
+        )
 
     """
     Properties.
@@ -86,10 +97,11 @@ class ControlAction(ActionTerm):
         clamped = self._raw_actions.clamp_(-1.0, 1.0)
         mapped = (clamped + 1.0) / 2.0
         omega_ref = self.cfg.omega_max * mapped
-        self._processed_actions = self._allocation.compute(omega_ref)
+        omega_real = self._motor.compute(omega_ref)
+        self._processed_actions = self._allocation.compute(omega_real)
 
         log(self._env, ["a1", "a2", "a3", "a4"], self._raw_actions)
-        log(self._env, ["t1", "t2", "t3", "t4"], omega_ref)
+        log(self._env, ["w1", "w2", "w3", "w4"], omega_real)
 
     def apply_actions(self):
         self._thrust[:, 0, 2] = self._processed_actions[:, 0]
@@ -140,3 +152,13 @@ class ControlActionCfg(ActionTermCfg):
     """Maximum angular velocity of the drone motors in rad/s.
     Calculated with 1950KV motor, with 6S LiPo battery with 4.2V per cell.
     1950 * 6 * 4.2 = 49,140 RPM ~= 5145 rad/s."""
+    taus: list[float] = (0.0001, 0.0001, 0.0001, 0.0001)
+    """Time constants for each motor."""
+    init: list[float] = (2572.5, 2572.5, 2572.5, 2572.5)
+    """Initial angular velocities for each motor in rad/s."""
+    max_rate: list[float] = (20000.0, 20000.0, 20000.0, 20000.0)
+    """Maximum rate of change of angular velocities for each motor in rad/s^2."""
+    min_rate: list[float] = (-20000.0, -20000.0, -20000.0, -20000.0)
+    """Minimum rate of change of angular velocities for each motor in rad/s^2."""
+    use_motor_model: bool = False
+    """Flag to determine if motor delay is bypassed."""

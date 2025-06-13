@@ -90,7 +90,7 @@ def generate_plots(log_directory: str):  # noqa: C901
         plot_angular_velocity = True
 
     # check if the t1, t2, t3, t4, t5, t6 columns are present
-    if all(col in log_data.columns for col in ["t1", "t2", "t3", "t4"]):
+    if all(col in log_data.columns for col in ["w1", "w2", "w3", "w4"]):
         plot_rotors_ang_vel = True
 
     if all(col in log_data.columns for col in ["a1", "a2", "a3", "a4"]):
@@ -121,7 +121,7 @@ def generate_plots(log_directory: str):  # noqa: C901
 
         plt.xlabel("Time [s]")
         plt.tight_layout()
-        plt.savefig(os.path.join(plot_directory, "position_tracking.pdf"))
+        plt.savefig(os.path.join(plot_directory, "position.pdf"))
         # plt.show()
 
     if plot_orientation_from_quat:
@@ -196,7 +196,7 @@ def generate_plots(log_directory: str):  # noqa: C901
         ax[2].set_xlim(0, log_data["time"].max())
         plt.xlabel("Time [s]")
         plt.tight_layout()
-        plt.savefig(os.path.join(plot_directory, "orientation_from_RotMat.pdf"))
+        plt.savefig(os.path.join(plot_directory, "orientation_from_rotmat.pdf"))
         # plt.show()
 
     if plot_velocity:
@@ -249,11 +249,11 @@ def generate_plots(log_directory: str):  # noqa: C901
         # plot the force tracking
         fig, ax = plt.subplots()
         fig.suptitle("Rotors Angular Velocities")
-        ax.plot(log_data["time"], log_data["t1"], label=r"$\boldsymbol{\gamma}_{1}$")
-        ax.plot(log_data["time"], log_data["t2"], label=r"$\boldsymbol{\gamma}_{2}$")
-        ax.plot(log_data["time"], log_data["t3"], label=r"$\boldsymbol{\gamma}_{3}$")
-        ax.plot(log_data["time"], log_data["t4"], label=r"$\boldsymbol{\gamma}_{4}$")
-        ax.set_ylabel(r"$\boldsymbol{\gamma}$ [rad/s]")
+        ax.plot(log_data["time"], log_data["w1"], label=r"$\boldsymbol{w}_{1}$")
+        ax.plot(log_data["time"], log_data["w2"], label=r"$\boldsymbol{w}_{2}$")
+        ax.plot(log_data["time"], log_data["w3"], label=r"$\boldsymbol{w}_{3}$")
+        ax.plot(log_data["time"], log_data["w4"], label=r"$\boldsymbol{w}_{4}$")
+        ax.set_ylabel(r"$\boldsymbol{w}$ [rad/s]")
         ax.legend(title="", frameon=False, loc="best", ncol=3)
         ax.grid()
         ax.set_xlim(0, log_data["time"].max())
@@ -271,7 +271,7 @@ def generate_plots(log_directory: str):  # noqa: C901
         ax.plot(log_data["time"], log_data["a2"], label=r"$\mathbf{a}_{2}$")
         ax.plot(log_data["time"], log_data["a3"], label=r"$\mathbf{a}_{3}$")
         ax.plot(log_data["time"], log_data["a4"], label=r"$\mathbf{a}_{4}$")
-        ax.set_ylabel(r"$\mathbf{a}$ [N] (normalised)")
+        ax.set_ylabel(r"$\mathbf{a}$ (normalised)")
         ax.legend(title="", frameon=False, loc="best", ncol=3)
         ax.grid()
         ax.set_xlim(0, log_data["time"].max())

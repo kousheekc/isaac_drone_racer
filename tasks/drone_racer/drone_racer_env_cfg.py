@@ -74,7 +74,7 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    control_action: mdp.ControlActionCfg = mdp.ControlActionCfg()
+    control_action: mdp.ControlActionCfg = mdp.ControlActionCfg(use_motor_model=True)
 
 
 @configclass
