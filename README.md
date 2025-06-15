@@ -13,12 +13,12 @@ Autonomous drone racing is an active area of research. This project builds on in
 
 Key highlights of the Isaac Drone Racer project:
 
-1. Accurate Physics Modeling — Simulates rotor dynamics, aerodynamic drag, and power consumption to closely match real-world quadrotor behavior.
-2. Low-Level Flight Controller — Built-in attitude and rate controllers.
-3. Manager-Based Design — Modular architecture using IsaacLab's [manager based architecture](https://isaac-sim.github.io/IsaacLab/main/source/refs/reference_architecture/index.html#manager-based).
-4. Onboard Sensor Suite — Includes simulated fisheye camera, IMU and collision detection.
-5. Track Generator — Dynamically generate custom race tracks.
-6. Logger and Plotter — Integrated tools for monitoring and visualizing flight behavior.
+1. **Accurate Physics Modeling** — Simulates rotor dynamics, aerodynamic drag, and power consumption to closely match real-world quadrotor behavior.
+2. **Low-Level Flight Controller** — Built-in attitude and rate controllers.
+3. **Manager-Based Design** — Modular architecture using IsaacLab's [manager based architecture](https://isaac-sim.github.io/IsaacLab/main/source/refs/reference_architecture/index.html#manager-based).
+4. **Onboard Sensor Suite** — Includes simulated fisheye camera, IMU and collision detection.
+5. **Track Generator** — Dynamically generate custom race tracks.
+6. **Logger and Plotter** — Integrated tools for monitoring and visualizing flight behavior.
 
 ## Requirements
 This framework has been tested on x64 based Linux systems, specifically Ubuntu 22.04. But it should also work on Windows 10/11.
@@ -53,6 +53,16 @@ pip3 install -e .
 ```
 
 ## Usage
+
+
+## Next Steps
+
+- [ ] **Integrate a data-driven aerodynamic model**  
+  Replace or enhance the current analytical drag model with one learned from simulated or real-world flight data to better capture complex aerodynamic effects during aggressive maneuvers.
+
+- [ ] **Extend the power consumption model**  
+  Incorporate a more detailed power model that accounts for motor efficiency, battery voltage sag, and throttle-dependent current draw, enabling more accurate estimation of energy usage over a race.
+
 
 
 ## License
