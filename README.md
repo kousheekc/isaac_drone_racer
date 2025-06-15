@@ -59,7 +59,7 @@ pip3 install -e .
 
 - [ ] **Data-driven aerodynamic model pipeline** - integrate tools for data driven system identification, calibration and include the learned aerodynamic forces into the simulation environment.
 - [ ] **Power consumption model**  - incorporate a detailed power model that accounts for battery disharge based on current draw.
-- [ ] **Policy learning using onboard sensors** - Explore and implement methods to transition away from full-state observations by instead using only onboard sensor data (e.g camera + IMU).
+- [ ] **Policy learning using onboard sensors** - explore and implement methods to transition away from full-state observations by instead using only onboard sensor data (e.g camera + IMU).
 
 ## License
 This project is licensed under the BSD 3-Clause License - see the [LICENSE](https://github.com/kousheekc/isaac_drone_racer/blob/master/LICENSE) file for details.
