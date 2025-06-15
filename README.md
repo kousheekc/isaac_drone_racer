@@ -53,13 +53,46 @@ pip3 install -e .
 ```
 
 ## Usage
+The drone racing task is registered as a standard Gym environment with the ID: `Isaac-Drone-Racer-v0`. Training and evaluation are powered by the [skrl](https://github.com/Toni-SM/skrl) library.
 
+### Training a Policy
+
+To train a policy, run the following command from the root of the `isaac_drone_racer` repository. This will launch the simulation in headless mode with 4096 agents running parallelly.
+
+```bash
+python3 scripts/rl/train.py --task Isaac-Drone-Racer-v0 --headless --num_envs 4096
+```
+
+> [!NOTE]
+>    You can pass additional CLI arguments supported by the [AppLauncher](https://isaac-sim.github.io/IsaacLab/main/source/tutorials/00_sim/launch_app.html). Additionally since IsaacLab supports the [Hydra Configuration System](https://isaac-sim.github.io/IsaacLab/main/source/features/hydra.html), task specific parameters can be adjusted from CLI.
+>    For example, to disable the motor model during training:
+>   ```bash
+    python3 scripts/rl/train.py --task Isaac-Drone-Racer-v0 --headless --num_envs 4096 env.actions.control_action.use_motor_model=False
+    ```
+
+### Playing Back a Trained Policy
+To run a trained policy in the simulator:
+
+```bash
+python3 scripts/rl/play.py --task Isaac-Drone-Racer-Play-v0 --num_envs 1
+```
+
+This will launch a single agent with the latest checkpoint and play the trained policy in the racing environment. All the same CLI and Hydra configuration options used during training are supported here as well.
 
 ## Next Steps
 
 - [ ] **Data-driven aerodynamic model pipeline** - integrate tools for data driven system identification, calibration and include the learned aerodynamic forces into the simulation environment.
-- [ ] **Power consumption model**  - incorporate a detailed power model that accounts for battery disharge based on current draw.
+- [ ] **Power consumption model**  - incorporate a detailed power model that accounts for battery discharge based on current draw.
 - [ ] **Policy learning using onboard sensors** - explore and implement methods to transition away from full-state observations by instead using only onboard sensor data (e.g camera + IMU).
+
+
+## Troubleshooting
+- When running a workflow script, ensure that the IsaacLab conda environment is active:
+```bash
+conda activate env_isaaclab
+```
+- When launching Isaac Sim for the first time, it may take a significant amount of time to load (potentially 10 minutes). This is normal, please be patient.
+
 
 ## License
 This project is licensed under the BSD 3-Clause License - see the [LICENSE](https://github.com/kousheekc/isaac_drone_racer/blob/master/LICENSE) file for details.
