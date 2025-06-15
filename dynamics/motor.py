@@ -30,8 +30,10 @@ class Motor:
         self.dt = dt
         self.use = use
         self.init = init
+        self.device = device
+        self.dtype = dtype
 
-        self.omega = torch.tensor(init, device=device).expand(num_envs, -1)
+        self.omega = torch.tensor(init, device=device).expand(num_envs, -1).clone()  # (num_envs, num_motors)
 
         # Convert to tensors and expand for all drones
         self.tau = torch.tensor(taus, device=device).expand(num_envs, -1)  # (num_envs, num_motors)
@@ -65,4 +67,4 @@ class Motor:
         """
         Resets the motor model to initial conditions.
         """
-        self.omega[env_ids] = self.init
+        self.omega[env_ids] = torch.tensor(self.init, device=self.device, dtype=self.dtype).expand(len(env_ids), -1)

@@ -119,6 +119,7 @@ class ControlAction(ActionTerm):
         self._processed_actions[env_ids] = 0.0
         self._elapsed_time[env_ids] = 0.0
 
+        self._motor.reset(env_ids)
         self._robot.reset(env_ids)
         joint_pos = self._robot.data.default_joint_pos[env_ids]
         joint_vel = self._robot.data.default_joint_vel[env_ids]
@@ -156,9 +157,9 @@ class ControlActionCfg(ActionTermCfg):
     """Time constants for each motor."""
     init: list[float] = (2572.5, 2572.5, 2572.5, 2572.5)
     """Initial angular velocities for each motor in rad/s."""
-    max_rate: list[float] = (20000.0, 20000.0, 20000.0, 20000.0)
+    max_rate: list[float] = (50000.0, 50000.0, 50000.0, 50000.0)
     """Maximum rate of change of angular velocities for each motor in rad/s^2."""
-    min_rate: list[float] = (-20000.0, -20000.0, -20000.0, -20000.0)
+    min_rate: list[float] = (-50000.0, -50000.0, -50000.0, -50000.0)
     """Minimum rate of change of angular velocities for each motor in rad/s^2."""
     use_motor_model: bool = False
     """Flag to determine if motor delay is bypassed."""

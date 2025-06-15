@@ -74,7 +74,7 @@ class DroneRacerSceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    control_action: mdp.ControlActionCfg = mdp.ControlActionCfg(use_motor_model=True)
+    control_action: mdp.ControlActionCfg = mdp.ControlActionCfg(use_motor_model=False)
 
 
 @configclass
@@ -119,7 +119,7 @@ class EventCfg:
     """Configuration for events."""
 
     # reset
-    # TODO: Resetting base happens in the command reset for the moment, so this is commented out.
+    # TODO: Resetting base happens in the command reset also for the moment
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
@@ -163,7 +163,7 @@ class CommandsCfg:
         asset_name="robot",
         track_name="track",
         randomise_start=None,
-        record_fpv=True,
+        record_fpv=False,
         resampling_time_range=(1e9, 1e9),
         debug_vis=True,
     )
@@ -174,10 +174,10 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
-    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.001)
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.0001)
     progress = RewTerm(func=mdp.progress, weight=20.0, params={"command_name": "target"})
     gate_passed = RewTerm(func=mdp.gate_passed, weight=400.0, params={"command_name": "target"})
-    lookat_next = RewTerm(func=mdp.lookat_next_gate, weight=1.0, params={"command_name": "target", "std": 0.5})
+    lookat_next = RewTerm(func=mdp.lookat_next_gate, weight=0.1, params={"command_name": "target", "std": 0.5})
 
 
 @configclass
@@ -206,6 +206,56 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
     # Post initialization
     def __post_init__(self) -> None:
         """Post initialization."""
+
+        # Disable IMU and Tiled Camera
+        self.scene.imu = None
+        self.scene.tiled_camera = None
+
+        # MDP settings
+        self.observations.critic = None
+        self.events.reset_base = None
+        self.commands.target.randomise_start = True
+
+        # general settings
+        self.decimation = 4
+        self.episode_length_s = 20
+        # viewer settings
+        self.viewer.eye = (-10.0, -10.0, 10.0)
+        self.viewer.lookat = (0.0, 0.0, 0.0)
+        # simulation settings
+        self.sim.dt = 1 / 400
+        self.sim.render_interval = self.decimation
+
+
+@configclass
+class DroneRacerEnvCfg_PLAY(ManagerBasedRLEnvCfg):
+    # Scene settings
+    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=0.0)
+    # MDP settings
+    observations: ObservationsCfg = ObservationsCfg()
+    actions: ActionsCfg = ActionsCfg()
+    commands: CommandsCfg = CommandsCfg()
+    events: EventCfg = EventCfg()
+    rewards: RewardsCfg = RewardsCfg()
+    terminations: TerminationsCfg = TerminationsCfg()
+
+    # Post initialization
+    def __post_init__(self) -> None:
+        """Post initialization."""
+
+        # Disable IMU and Tiled Camera
+        self.scene.imu = None
+        self.scene.tiled_camera = None
+
+        # MDP settings
+        self.observations.critic = None
+
+        # Disable push robot events
+        self.events.push_robot = None
+
+        # Enable recording fpv footage
+        # self.commands.target.record_fpv = True
+
         # general settings
         self.decimation = 4
         self.episode_length_s = 20

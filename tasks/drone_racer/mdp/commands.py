@@ -107,11 +107,13 @@ class GateTargetingCommand(CommandTerm):
 
     def _resample_command(self, env_ids: Sequence[int]):
         # Release and reinitialize video writer only after the first iteration
-        if hasattr(self, "out"):
+        if hasattr(self, "out") and self.cfg.record_fpv:
             self.out.release()
             print(f"FPV video saved as fpv_{self.video_id}.mp4")
             self.video_id += 1
-        self.out = cv2.VideoWriter(f"fpv_{self.video_id}.mp4", self.fourcc, 100, (1000, 1000))
+
+        if self.cfg.record_fpv:
+            self.out = cv2.VideoWriter(f"fpv_{self.video_id}.mp4", self.fourcc, 100, (1000, 1000))
 
         if self.cfg.randomise_start is None:
             self.next_gate_idx[env_ids] = 0
@@ -137,6 +139,9 @@ class GateTargetingCommand(CommandTerm):
                     "x": (-0.5, 0.5),
                     "y": (-0.5, 0.5),
                     "z": (-0.5, 0.5),
+                    "roll": (-torch.pi / 4, torch.pi / 4),
+                    "pitch": (-torch.pi / 4, torch.pi / 4),
+                    "yaw": (-torch.pi / 4, torch.pi / 4),
                 },
                 velocity_range={
                     "x": (0.0, 0.0),
@@ -239,4 +244,4 @@ class GateTargetingCommandCfg(CommandTermCfg):
 
     # Set the scale of the visualization markers to (0.1, 0.1, 0.1)
     target_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
-    drone_visualizer_cfg.markers["frame"].scale = (0.01, 0.01, 0.01)
+    drone_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
