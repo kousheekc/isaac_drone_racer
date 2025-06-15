@@ -243,5 +243,5 @@ class GateTargetingCommandCfg(CommandTermCfg):
     """The configuration for the current pose visualization marker. Defaults to FRAME_MARKER_CFG."""
 
     # Set the scale of the visualization markers to (0.1, 0.1, 0.1)
-    target_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
-    drone_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+    target_visualizer_cfg.markers["frame"].scale = (0.0001, 0.0001, 0.0001)
+    drone_visualizer_cfg.markers["frame"].scale = (0.0001, 0.0001, 0.0001)

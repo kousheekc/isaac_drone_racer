@@ -1,3 +1,7 @@
+![Isaac Drone Racer](media/motion_trace1.jpg)
+
+---
+
 # Isaac Drone Racer
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)
