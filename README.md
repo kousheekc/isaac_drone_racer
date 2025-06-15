@@ -15,8 +15,6 @@ Autonomous drone racing is an active area of research. This project builds on in
 
 You can watch the related video here: [https://youtu.be/wLTYtpEUEEk](https://youtu.be/wLTYtpEUEEk)
 
-[![Watch the demo video](https://img.youtube.com/vi/wLTYtpEUEEk/0.jpg)](https://www.youtube.com/watch?v=wLTYtpEUEEk)
-
 ## Features
 
 Key highlights of the Isaac Drone Racer project:
