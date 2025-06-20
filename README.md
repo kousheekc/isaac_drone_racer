@@ -99,6 +99,19 @@ conda activate env_isaaclab
 ```
 - When launching Isaac Sim for the first time, it may take a significant amount of time to load (potentially 10 minutes). This is normal, please be patient.
 
+## Acknowledgements
+
+- **Kaufmann, E., Bauersfeld, L., Loquercio, A., Müller, M., Koltun, V., & Scaramuzza, D.** (2023).  
+  *Champion-level drone racing using deep reinforcement learning*.  
+  [https://doi.org/10.1038/s41586-023-06419-4](https://doi.org/10.1038/s41586-023-06419-4)
+
+- **Rudin, N., Hoeller, D., Reist, P., & Hutter, M.** (2022).  
+  *Learning to Walk in Minutes Using Massively Parallel Deep Reinforcement Learning*.  
+  [arXiv:2109.11978](https://arxiv.org/abs/2109.11978)
+
+- **Ferede, R., De Wagter, C., Izzo, D., & de Croon, G. C. H. E.** (2024).  
+  *End-to-end Reinforcement Learning for Time-Optimal Quadcopter Flight*.  
+  [https://doi.org/10.1109/ICRA57147.2024.10611665](https://doi.org/10.1109/ICRA57147.2024.10611665)
 
 ## License
 This project is licensed under the BSD 3-Clause License - see the [LICENSE](https://github.com/kousheekc/isaac_drone_racer/blob/master/LICENSE) file for details.
