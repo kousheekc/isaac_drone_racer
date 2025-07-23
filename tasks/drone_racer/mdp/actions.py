@@ -8,14 +8,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, Union
 
 import torch
 from isaaclab.assets import Articulation
 from isaaclab.managers import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
 
-from dynamics import Allocation, Motor
+from dynamics import Allocation, AttitudeController, BodyRateController, Motor
 from utils.logger import log
 
 if TYPE_CHECKING:
@@ -65,6 +65,19 @@ class ControlAction(ActionTerm):
             device=self.device,
             dtype=self._raw_actions.dtype,
         )
+        self._rate_controller = BodyRateController(
+            self.num_envs,
+            self._robot.data.default_inertia[:, 0].view(-1, 3, 3),
+            torch.eye(3) * self.cfg.k_rates,
+            self.device,
+        )
+        self._attitude_controller = AttitudeController(
+            self.num_envs,
+            self._robot.data.default_inertia[:, 0].view(-1, 3, 3),
+            torch.eye(3) * self.cfg.k_attitude,
+            torch.eye(3) * self.cfg.k_rates,
+            self.device,
+        )
 
     """
     Properties.
@@ -95,13 +108,35 @@ class ControlAction(ActionTerm):
 
         self._raw_actions[:] = actions
         clamped = self._raw_actions.clamp_(-1.0, 1.0)
-        mapped = (clamped + 1.0) / 2.0
-        omega_ref = self.cfg.omega_max * mapped
-        omega_real = self._motor.compute(omega_ref)
-        self._processed_actions = self._allocation.compute(omega_real)
+
+        if self.cfg.control_level == "thrust":
+            mapped = (clamped + 1.0) / 2.0
+            omega_ref = self.cfg.omega_max * mapped
+            omega_real = self._motor.compute(omega_ref)
+            log(self._env, ["w1", "w2", "w3", "w4"], omega_real)
+            self._processed_actions = self._allocation.compute_with_omega(omega_real)
+        elif self.cfg.control_level == "rates":
+            # Clamp rates setpoint and total thrust
+            # Calculate wrench based on rates setpoint
+            # Calculate thrust setpoint based on wrench and allocation inverse
+            # Clamp thrust setpoint
+            clamped[:, :1] *= torch.tensor(self.cfg.max_thrust, device=self.device, dtype=self._raw_actions.dtype)
+            clamped[:, 1:] *= torch.tensor(self.cfg.max_ang_vel, device=self.device, dtype=self._raw_actions.dtype)
+            clamped[:, 1:] = self._rate_controller.compute_moment(clamped[:, 1:], self._robot.data.root_ang_vel_b)
+            self._processed_actions = clamped
+        elif self.cfg.control_level == "attitude":
+            # Clamp orientation setpoint and total thrust
+            # Calculate wrench based on orientation setpoint
+            # Calculate thrust setpoint based on wrench and allocation inverse
+            # Clamp thrust setpoint
+            clamped[:, :1] *= torch.tensor(self.cfg.max_thrust, device=self.device, dtype=self._raw_actions.dtype)
+            clamped[:, 1:] *= torch.tensor(self.cfg.max_attitude, device=self.device, dtype=self._raw_actions.dtype)
+            clamped[:, 1:] = self._attitude_controller.compute_moment(
+                clamped[:, 1:], self._robot.data.root_quat_w, self._robot.data.root_ang_vel_b
+            )
+            self._processed_actions = clamped
 
         log(self._env, ["a1", "a2", "a3", "a4"], self._raw_actions)
-        log(self._env, ["w1", "w2", "w3", "w4"], omega_real)
 
     def apply_actions(self):
         self._thrust[:, 0, 2] = self._processed_actions[:, 0]
@@ -153,6 +188,9 @@ class ControlActionCfg(ActionTermCfg):
     """Maximum angular velocity of the drone motors in rad/s.
     Calculated with 1950KV motor, with 6S LiPo battery with 4.2V per cell.
     1950 * 6 * 4.2 = 49,140 RPM ~= 5145 rad/s."""
+    max_thrust: float = 24.0
+    """Maximum thrust of the drone in N.
+    Calculated with 4 * thrust_coef * omega_max^2 = 4 * 2.25e-7 * 5145^2 = 24.0 N."""
     taus: list[float] = (0.0001, 0.0001, 0.0001, 0.0001)
     """Time constants for each motor."""
     init: list[float] = (2572.5, 2572.5, 2572.5, 2572.5)
@@ -163,3 +201,14 @@ class ControlActionCfg(ActionTermCfg):
     """Minimum rate of change of angular velocities for each motor in rad/s^2."""
     use_motor_model: bool = False
     """Flag to determine if motor delay is bypassed."""
+    max_ang_vel: list[float] = [3.5, 3.5, 3.5]
+    """Maximum angular velocity."""
+    max_attitude: list[float] = [torch.pi, torch.pi, torch.pi]
+    """Maximum angular velocity."""
+    k_attitude: float = 1.0
+    """Proportional gain for attitude error."""
+    k_rates: float = 0.2
+    """Proportional gain for angular velocity error."""
+    ControlLevel = Union[Literal["thrust"], Literal["rates"], Literal["attitude"]]
+    control_level: ControlLevel = "rates"
+    """Control level."""

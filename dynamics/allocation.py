@@ -36,7 +36,7 @@ class Allocation:
         self._allocation_matrix = A.unsqueeze(0).repeat(num_envs, 1, 1)
         self._thrust_coeff = thrust_coeff
 
-    def compute(self, omega):
+    def compute_with_omega(self, omega):
         """
         Computes the total thrust and body torques given the rotor angular velocities.
 
@@ -49,3 +49,31 @@ class Allocation:
         thrusts_ref = self._thrust_coeff * omega**2
         thrust_torque = torch.bmm(self._allocation_matrix, thrusts_ref.unsqueeze(-1)).squeeze(-1)
         return thrust_torque
+
+    def compute_with_thrust(self, thrust):
+        """
+        Computes the total thrust and body torques given the rotor thrusts.
+
+        Parameters:
+        - thrust (torch.Tensor): Tensor of shape (num_envs, 4) representing rotor thrusts
+
+        Returns:
+        - thrust_torque (torch.Tensor): Tensor of shape (num_envs, 4)
+        """
+        thrust_torque = torch.bmm(self._allocation_matrix, thrust.unsqueeze(-1)).squeeze(-1)
+        return thrust_torque
+
+    def compute_inverse(self, thrust_torque):
+        """
+        Computes the individual thrusts based on total thrust and body torques.
+
+        Parameters:
+        - thrust_torque (torch.Tensor): Tensor of shape (num_envs, 4) representing total thrust + torques
+
+        Returns:
+        - thrust (torch.Tensor): Tensor of shape (num_envs, 4)
+        """
+        # Compute batched pseudoinverse
+        A_pinv = torch.linalg.pinv(self._allocation_matrix)
+        thrust = torch.bmm(A_pinv, thrust_torque.unsqueeze(-1)).squeeze(-1)
+        return thrust

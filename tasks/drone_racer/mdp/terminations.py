@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import isaaclab.utils.math as math_utils
 import torch
 from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
@@ -42,3 +43,18 @@ def flyaway(
     # Compute distance
     distance_tensor = torch.linalg.norm(asset.data.root_pos_w - target_pos_tensor, dim=1)
     return distance_tensor > distance
+
+
+def flip(env: ManagerBasedRLEnv, angle: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Terminate when the asset roll or pitch is more that angle threshold"""
+
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    current_angle = math_utils.euler_xyz_from_quat(asset.data.root_quat_w)
+    current_angle_wrapped_abs = [torch.abs(math_utils.wrap_to_pi(angle)) for angle in current_angle]
+    threshold_rad = torch.tensor(angle * (torch.pi / 180.0), device=env.device)
+    angle_exceeds_threshold = (current_angle_wrapped_abs[0] > threshold_rad) | (
+        current_angle_wrapped_abs[1] > threshold_rad
+    )
+    return angle_exceeds_threshold

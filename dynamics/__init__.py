@@ -7,4 +7,6 @@
 # which is licensed under the BSD-3-Clause License.
 
 from .allocation import Allocation  # noqa: F401
+from .attitude_controller import AttitudeController  # noqa: F401
 from .motor import Motor  # noqa: F401
+from .rate_controller import BodyRateController  # noqa: F401
