@@ -13,8 +13,8 @@
     </collision>
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="0.5"/>
-      <inertia ixx="0.003" iyy="0.003" izz="0.006"/>
+      <mass value="0.078"/>
+      <inertia ixx="0.0003" ixy="0.0" ixz="0.0" iyy="0.0003" iyz="0.0" izz="0.0006"/>
     </inertial>
   </link>
 
@@ -29,6 +29,10 @@
         <mesh filename="package://meshes/prop.dae"/>
       </geometry>
     </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.001"/>
+    </inertial>
   </link>
 
   <link name="prop2">
@@ -42,6 +46,10 @@
         <mesh filename="package://meshes/prop.dae"/>
       </geometry>
     </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.001"/>
+    </inertial>
   </link>
 
   <link name="prop3">
@@ -55,6 +63,10 @@
         <mesh filename="package://meshes/prop.dae"/>
       </geometry>
     </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.001"/>
+    </inertial>
   </link>
 
   <link name="prop4">
@@ -68,6 +80,10 @@
         <mesh filename="package://meshes/prop.dae"/>
       </geometry>
     </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.001"/>
+    </inertial>
   </link>
 
   <joint name="m1_joint" type="revolute">

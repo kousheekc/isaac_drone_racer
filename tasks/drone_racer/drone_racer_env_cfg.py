@@ -7,6 +7,7 @@
 # which is licensed under the BSD-3-Clause License.
 
 import isaaclab.sim as sim_utils
+import torch
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -26,12 +27,6 @@ TARGET_POS = [0.0, 0.0, 0.5]  # Default target position for flyaway termination
 
 @configclass
 class DroneRacerSceneCfg(InteractiveSceneCfg):
-
-    # ground plane
-    ground = AssetBaseCfg(
-        prim_path="/World/Ground",
-        spawn=sim_utils.GroundPlaneCfg(),
-    )
 
     # robot
     robot: ArticulationCfg = FIVE_IN_DRONE.replace(prim_path="{ENV_REGEX_NS}/Robot")
@@ -86,9 +81,9 @@ class EventCfg:
                 "x": (-3.0, 3.0),
                 "y": (-3.0, 3.0),
                 "z": (0.0, 0.0),
-                "roll": (-1.0, 1.0),
-                "pitch": (-1.0, 1.0),
-                "yaw": (-1.0, 1.0),
+                "roll": (-0.5, 0.5),
+                "pitch": (-0.5, 0.5),
+                "yaw": (-torch.pi / 2, torch.pi / 2),
             },
             "velocity_range": {
                 "x": (0.0, 0.0),
@@ -102,15 +97,15 @@ class EventCfg:
     )
 
     # intervals
-    push_robot = EventTerm(
-        func=mdp.apply_external_force_torque,
-        mode="interval",
-        interval_range_s=(0.0, 0.2),
-        params={
-            "force_range": (-0.1, 0.1),
-            "torque_range": (-0.05, 0.05),
-        },
-    )
+    # push_robot = EventTerm(
+    #     func=mdp.apply_external_force_torque,
+    #     mode="interval",
+    #     interval_range_s=(0.0, 0.2),
+    #     params={
+    #         "force_range": (-0.1, 0.1),
+    #         "torque_range": (-0.05, 0.05),
+    #     },
+    # )
 
 
 @configclass
@@ -121,6 +116,7 @@ class RewardsCfg:
     pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"target_pos": TARGET_POS, "std": 2.0})
     flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    action_l2 = RewTerm(func=mdp.action_l2, weight=-0.1)
 
 
 @configclass
@@ -149,7 +145,7 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
 
         # general settings
         self.decimation = 4
-        self.episode_length_s = 20
+        self.episode_length_s = 10.0
         # viewer settings
         self.viewer.eye = (-3.0, -3.0, 3.0)
         self.viewer.lookat = (0.0, 0.0, 1.0)
