@@ -30,6 +30,8 @@ def generate_plots(log_directory: str):  # noqa: C901
     plot_angular_velocity = False
     plot_rotors_ang_vel = False
     plot_actions = False
+    plot_actions_clamped = False
+    plot_thrust_rate = False
 
     plt.style.use(["science", "ieee", "bright", "no-latex"])
     matplotlib.rcParams.update({"font.size": 6})
@@ -95,6 +97,12 @@ def generate_plots(log_directory: str):  # noqa: C901
 
     if all(col in log_data.columns for col in ["a1", "a2", "a3", "a4"]):
         plot_actions = True
+
+    if all(col in log_data.columns for col in ["a1_clamped", "a2_clamped", "a3_clamped", "a4_clamped"]):
+        plot_actions_clamped = True
+
+    if all(col in log_data.columns for col in ["T", "rate1", "rate2", "rate3"]):
+        plot_thrust_rate = True
 
     if plot_position:
         # plot the position
@@ -279,4 +287,43 @@ def generate_plots(log_directory: str):  # noqa: C901
         plt.xlabel("Time [s]")
         plt.tight_layout()
         plt.savefig(os.path.join(plot_directory, "actions.pdf"))
+        # plt.show()
+
+    if plot_actions_clamped:
+        # plot the actions
+        fig, ax = plt.subplots()
+        fig.suptitle("Actions Clamped")
+        ax.plot(log_data["time"], log_data["a1_clamped"], label=r"$\mathbf{a}_{1}$")
+        ax.plot(log_data["time"], log_data["a2_clamped"], label=r"$\mathbf{a}_{2}$")
+        ax.plot(log_data["time"], log_data["a3_clamped"], label=r"$\mathbf{a}_{3}$")
+        ax.plot(log_data["time"], log_data["a4_clamped"], label=r"$\mathbf{a}_{4}$")
+        ax.set_ylabel(r"$\mathbf{a}$ (normalised)")
+        ax.legend(title="", frameon=False, loc="best", ncol=3)
+        ax.grid()
+        ax.set_xlim(0, log_data["time"].max())
+
+        plt.xlabel("Time [s]")
+        plt.tight_layout()
+        plt.savefig(os.path.join(plot_directory, "actions_clamped.pdf"))
+        # plt.show()
+
+    if plot_thrust_rate:
+        # plot the thrust and rate
+        fig, ax = plt.subplots(2, 1)
+        fig.suptitle("Thrust and Rate")
+        ax[0].plot(log_data["time"], log_data["T"], label=r"$\mathbf{T}$")
+        ax[0].set_ylabel(r"$\mathbf{T}$ [N]")
+        ax[0].grid()
+        ax[0].set_xlim(0, log_data["time"].max())
+
+        ax[1].plot(log_data["time"], log_data["rate1"], label=r"$\mathbf{w}_{1}$")
+        ax[1].plot(log_data["time"], log_data["rate2"], label=r"$\mathbf{w}_{2}$")
+        ax[1].plot(log_data["time"], log_data["rate3"], label=r"$\mathbf{w}_{3}$")
+        ax[1].set_ylabel(r"$\mathbf{w}$ [rad/s]")
+        ax[1].grid()
+        ax[1].set_xlim(0, log_data["time"].max())
+
+        plt.xlabel("Time [s]")
+        plt.tight_layout()
+        plt.savefig(os.path.join(plot_directory, "thrust_and_rate.pdf"))
         # plt.show()

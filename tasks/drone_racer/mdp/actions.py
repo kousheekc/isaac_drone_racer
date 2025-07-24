@@ -106,11 +106,13 @@ class ControlAction(ActionTerm):
 
     def process_actions(self, actions: torch.Tensor):
 
-        self._raw_actions[:] = actions
+        self._raw_actions[:] = actions.clone()
         clamped = self._raw_actions.clamp_(-1.0, 1.0)
+        log(self._env, ["a1", "a2", "a3", "a4"], actions)
+        log(self._env, ["a1_clamped", "a2_clamped", "a3_clamped", "a4_clamped"], clamped)
 
         if self.cfg.control_level == "thrust":
-            mapped = (clamped + 1.0) / 2.0
+            mapped = (clamped.clone() + 1.0) / 2.0
             omega_ref = self.cfg.omega_max * mapped
             omega_real = self._motor.compute(omega_ref)
             log(self._env, ["w1", "w2", "w3", "w4"], omega_real)
@@ -120,23 +122,25 @@ class ControlAction(ActionTerm):
             # Calculate wrench based on rates setpoint
             # Calculate thrust setpoint based on wrench and allocation inverse
             # Clamp thrust setpoint
-            clamped[:, :1] *= torch.tensor(self.cfg.max_thrust, device=self.device, dtype=self._raw_actions.dtype)
-            clamped[:, 1:] *= torch.tensor(self.cfg.max_ang_vel, device=self.device, dtype=self._raw_actions.dtype)
-            clamped[:, 1:] = self._rate_controller.compute_moment(clamped[:, 1:], self._robot.data.root_ang_vel_b)
-            self._processed_actions = clamped
+            mapped = clamped.clone()
+            mapped[:, 0] *= torch.tensor(self.cfg.max_thrust, device=self.device, dtype=self._raw_actions.dtype)
+            mapped[:, 1:] *= torch.tensor(self.cfg.max_ang_vel, device=self.device, dtype=self._raw_actions.dtype)
+            mapped[:, 1:] = self._rate_controller.compute_moment(mapped[:, 1:], self._robot.data.root_ang_vel_b)
+            log(self._env, ["T", "rate1", "rate2", "rate3"], mapped)
+            self._processed_actions = mapped
         elif self.cfg.control_level == "attitude":
             # Clamp orientation setpoint and total thrust
             # Calculate wrench based on orientation setpoint
             # Calculate thrust setpoint based on wrench and allocation inverse
             # Clamp thrust setpoint
-            clamped[:, :1] *= torch.tensor(self.cfg.max_thrust, device=self.device, dtype=self._raw_actions.dtype)
-            clamped[:, 1:] *= torch.tensor(self.cfg.max_attitude, device=self.device, dtype=self._raw_actions.dtype)
-            clamped[:, 1:] = self._attitude_controller.compute_moment(
-                clamped[:, 1:], self._robot.data.root_quat_w, self._robot.data.root_ang_vel_b
+            mapped = clamped.clone()
+            mapped[:, 0] *= torch.tensor(self.cfg.max_thrust, device=self.device, dtype=self._raw_actions.dtype)
+            mapped[:, 1:] *= torch.tensor(self.cfg.max_attitude, device=self.device, dtype=self._raw_actions.dtype)
+            mapped[:, 1:] = self._attitude_controller.compute_moment(
+                mapped[:, 1:], self._robot.data.root_quat_w, self._robot.data.root_ang_vel_b
             )
-            self._processed_actions = clamped
-
-        log(self._env, ["a1", "a2", "a3", "a4"], self._raw_actions)
+            log(self._env, ["T", "att1", "att2", "att3"], mapped)
+            self._processed_actions = mapped
 
     def apply_actions(self):
         self._thrust[:, 0, 2] = self._processed_actions[:, 0]

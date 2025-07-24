@@ -28,6 +28,9 @@ parser.add_argument(
     help="Use the pre-trained checkpoint from Nucleus.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+
+parser.add_argument("--log", type=int, default=None, help="Log the observations and metrics.")
+
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -63,6 +66,7 @@ from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 from rsl_rl.runners import OnPolicyRunner
 
 import tasks  # noqa: F401
+from utils.logger import CSVLogger
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
@@ -70,6 +74,9 @@ import tasks  # noqa: F401
 def main():
     """Play with RSL-RL agent."""
     # parse configuration
+    if args_cli.log and args_cli.num_envs > 1:
+        raise ValueError("Logging is only supported for a single agent. Set --num_envs to 1.")
+
     env_cfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
@@ -97,6 +104,9 @@ def main():
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv):
         env = multi_agent_to_single_agent(env)
+
+    if args_cli.log:
+        logger = CSVLogger(log_dir)
 
     # wrap for video recording
     if args_cli.video:
@@ -142,6 +152,7 @@ def main():
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
+    num_episode = 0
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
@@ -150,7 +161,7 @@ def main():
             # agent stepping
             actions = policy(obs)
             # env stepping
-            obs, _, _, _ = env.step(actions)
+            obs, rew, terminated, info = env.step(actions)
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video
@@ -161,6 +172,14 @@ def main():
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
+
+        if args_cli.log:
+            if terminated:
+                num_episode += 1
+                logger.save()
+                if num_episode >= args_cli.log:
+                    break
+            logger.log(info["metrics"])
 
     # close the simulator
     env.close()

@@ -11,7 +11,7 @@ import onnxruntime as ort
 
 # Path to your ONNX model
 model_path = (
-    "/home/kousheek/Dev/saxion/isaac_drone_racer/logs/rsl_rl/isaac_drone_racer/2025-07-23_22-17-00/exported/policy.onnx"
+    "/home/kousheek/Dev/saxion/isaac_drone_racer/logs/rsl_rl/isaac_drone_racer/2025-07-23_23-37-55/exported/policy.onnx"
 )
 
 # Create ONNX Runtime session (CPU or GPU)
@@ -27,7 +27,7 @@ print(f"Input name: {input_name}, shape: {input_shape}")
 print(f"Output name: {output_name}, shape: {output_shape}")
 
 # Dummy input (replace with real state observation later)
-dummy_input = np.random.rand(*[dim if dim is not None else 1 for dim in input_shape]).astype(np.float32)
+dummy_input = np.full([dim if dim is not None else 1 for dim in input_shape], 0.5, dtype=np.float32)
 
 # Run inference
 outputs = session.run([output_name], {input_name: dummy_input})
