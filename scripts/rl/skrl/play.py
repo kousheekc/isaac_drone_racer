@@ -185,6 +185,32 @@ def main():
     obs, _ = env.reset()
     timestep = 0
     num_episode = 0
+
+    class PolicyONNXWrapper(torch.nn.Module):
+        def __init__(self, model):
+            super().__init__()
+            self.net_container = model.net_container
+            self.policy_layer = model.policy_layer
+
+        def forward(self, x):
+            x = self.net_container(x)
+            return self.policy_layer(x)
+
+    policy_onnx = PolicyONNXWrapper(runner.agent.models["policy"])
+    dummy_input = torch.randn(1, policy_onnx.net_container[0].in_features, device=args_cli.device)
+
+    export_dir = os.path.join(log_dir, "exported")
+    os.makedirs(export_dir, exist_ok=True)
+
+    torch.onnx.export(
+        policy_onnx,
+        dummy_input,
+        os.path.join(export_dir, "policy.onnx"),
+        input_names=["obs"],
+        output_names=["actions"],
+        opset_version=17,
+    )
+
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
