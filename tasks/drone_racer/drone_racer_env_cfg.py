@@ -56,6 +56,7 @@ class ObservationsCfg:
         position = ObsTerm(func=mdp.root_pos_w)
         attitude = ObsTerm(func=mdp.root_quat_w)
         lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
+        ang_vel = ObsTerm(func=mdp.root_ang_vel_b)
         target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"target_pos": TARGET_POS})
         actions = ObsTerm(func=mdp.last_action)
 
@@ -80,10 +81,10 @@ class EventCfg:
             "pose_range": {
                 "x": (-3.0, 3.0),
                 "y": (-3.0, 3.0),
-                "z": (0.0, 0.0),
-                "roll": (-0.5, 0.5),
+                "z": (-0.2, 0.2),
+                "roll": (-0.5, -0.5),
                 "pitch": (-0.5, 0.5),
-                "yaw": (-torch.pi / 2, torch.pi / 2),
+                "yaw": (-torch.pi, torch.pi),
             },
             "velocity_range": {
                 "x": (0.0, 0.0),
@@ -97,15 +98,15 @@ class EventCfg:
     )
 
     # intervals
-    # push_robot = EventTerm(
-    #     func=mdp.apply_external_force_torque,
-    #     mode="interval",
-    #     interval_range_s=(0.0, 0.2),
-    #     params={
-    #         "force_range": (-0.1, 0.1),
-    #         "torque_range": (-0.05, 0.05),
-    #     },
-    # )
+    push_robot = EventTerm(
+        func=mdp.apply_external_force_torque,
+        mode="interval",
+        interval_range_s=(0.0, 0.2),
+        params={
+            "force_range": (-0.001, 0.001),
+            "torque_range": (-0.0005, 0.0005),
+        },
+    )
 
 
 @configclass
@@ -114,9 +115,10 @@ class RewardsCfg:
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
     pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"target_pos": TARGET_POS, "std": 2.0})
-    flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
-    action_l2 = RewTerm(func=mdp.action_l2, weight=-0.1)
+    # flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.5)
+    # action_l2 = RewTerm(func=mdp.action_l2, weight=-1.0)
+    # action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
 
 
 @configclass
@@ -125,7 +127,7 @@ class TerminationsCfg:
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     flyaway = DoneTerm(func=mdp.flyaway, params={"target_pos": TARGET_POS, "distance": 5.0})
-    flip = DoneTerm(func=mdp.flip, params={"angle": 60.0})
+    flip = DoneTerm(func=mdp.flip, params={"angle": 45.0})
 
 
 @configclass
@@ -144,11 +146,11 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
 
         # general settings
-        self.decimation = 4
-        self.episode_length_s = 10.0
+        self.decimation = 2
+        self.episode_length_s = 20.0
         # viewer settings
         self.viewer.eye = (-3.0, -3.0, 3.0)
         self.viewer.lookat = (0.0, 0.0, 1.0)
         # simulation settings
-        self.sim.dt = 1 / 400
+        self.sim.dt = 1 / 480
         self.sim.render_interval = self.decimation
