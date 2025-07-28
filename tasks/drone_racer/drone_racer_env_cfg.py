@@ -53,8 +53,21 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
+        pos_error_w = ObsTerm(func=mdp.pos_error_w, params={"target_pos": TARGET_POS})
+        attitude = ObsTerm(func=mdp.root_rotmat_w)
+        actions = ObsTerm(func=mdp.last_action)
+
+        def __post_init__(self) -> None:
+            self.enable_corruption = False
+            self.concatenate_terms = True
+            self.history_length = 10
+
+    @configclass
+    class CriticCfg(ObsGroup):
+        """Observations for critic group."""
+
         position = ObsTerm(func=mdp.root_pos_w)
-        attitude = ObsTerm(func=mdp.root_quat_w)
+        attitude = ObsTerm(func=mdp.root_rotmat_w)
         lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
         ang_vel = ObsTerm(func=mdp.root_ang_vel_b)
         target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"target_pos": TARGET_POS})
@@ -66,6 +79,7 @@ class ObservationsCfg:
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+    critic: CriticCfg = CriticCfg()
 
 
 @configclass
@@ -98,15 +112,15 @@ class EventCfg:
     )
 
     # intervals
-    push_robot = EventTerm(
-        func=mdp.apply_external_force_torque,
-        mode="interval",
-        interval_range_s=(0.0, 0.2),
-        params={
-            "force_range": (-0.001, 0.001),
-            "torque_range": (-0.0005, 0.0005),
-        },
-    )
+    # push_robot = EventTerm(
+    #     func=mdp.apply_external_force_torque,
+    #     mode="interval",
+    #     interval_range_s=(0.0, 0.2),
+    #     params={
+    #         "force_range": (-0.001, 0.001),
+    #         "torque_range": (-0.0005, 0.0005),
+    #     },
+    # )
 
 
 @configclass
@@ -114,11 +128,11 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
-    pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"target_pos": TARGET_POS, "std": 2.0})
+    pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"target_pos": TARGET_POS, "std": 0.5})
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.1)
+    action_l2 = RewTerm(func=mdp.action_l2, weight=-1.0)
     # flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.5)
-    # action_l2 = RewTerm(func=mdp.action_l2, weight=-1.0)
-    # action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    # ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.5)
 
 
 @configclass

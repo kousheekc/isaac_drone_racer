@@ -156,3 +156,26 @@ def target_pos_b(
     pos_b, _ = math_utils.subtract_frame_transforms(asset.data.root_pos_w, asset.data.root_quat_w, target_pos_tensor)
 
     return pos_b
+
+
+def pos_error_w(
+    env: ManagerBasedRLEnv,
+    command_name: str | None = None,
+    target_pos: list | None = None,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Position error in world frame."""
+
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    if target_pos is None:
+        target_pos = env.command_manager.get_term(command_name).command[:, :3]
+        target_pos_tensor = target_pos[:, :3]
+    else:
+        target_pos_tensor = (
+            torch.tensor(target_pos, dtype=torch.float32, device=asset.device).repeat(env.num_envs, 1)
+            + env.scene.env_origins
+        )
+
+    pos_error_w = target_pos_tensor - asset.data.root_pos_w
+    return pos_error_w
