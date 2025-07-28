@@ -147,5 +147,5 @@ class ControlActionCfg(ActionTermCfg):
     """Thrust weight ratio of the drone."""
     max_ang_vel: list[float] = [3.5, 3.5, 3.5]
     """Maximum angular velocity in rad/s"""
-    k_rates: float = 0.007
+    k_rates: float = 0.01
     """Proportional gain for angular velocity error."""

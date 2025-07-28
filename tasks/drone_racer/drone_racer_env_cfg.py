@@ -14,6 +14,7 @@ from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
@@ -111,16 +112,26 @@ class EventCfg:
         },
     )
 
+    randomize_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+            "mass_distribution_params": (0.9, 1.1),
+            "operation": "scale",
+        },
+    )
+
     # intervals
-    # push_robot = EventTerm(
-    #     func=mdp.apply_external_force_torque,
-    #     mode="interval",
-    #     interval_range_s=(0.0, 0.2),
-    #     params={
-    #         "force_range": (-0.001, 0.001),
-    #         "torque_range": (-0.0005, 0.0005),
-    #     },
-    # )
+    push_robot = EventTerm(
+        func=mdp.apply_external_force_torque,
+        mode="interval",
+        interval_range_s=(0.0, 0.2),
+        params={
+            "force_range": (-0.001, 0.001),
+            "torque_range": (-0.0005, 0.0005),
+        },
+    )
 
 
 @configclass
@@ -128,7 +139,7 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
-    pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"target_pos": TARGET_POS, "std": 0.5})
+    pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"target_pos": TARGET_POS, "std": 2.0})
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.1)
     action_l2 = RewTerm(func=mdp.action_l2, weight=-1.0)
     # flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
