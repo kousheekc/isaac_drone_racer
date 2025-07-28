@@ -61,6 +61,19 @@ def root_rotmat_w(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntit
     return flat_rotmat
 
 
+def root_rotmat6d_w(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Asset root orientation (6D rotation representation) in the world frame."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    quat = asset.data.root_quat_w
+    rotmat = math_utils.matrix_from_quat(quat)
+    rotmat6d = rotmat[:, :, :2].reshape(-1, 6)
+    # logging purposes
+    flat_rotmat = rotmat.view(-1, 9)
+    log(env, ["r11", "r12", "r13", "r21", "r22", "r23", "r31", "r32", "r33"], flat_rotmat)
+    return rotmat6d
+
+
 def root_pos_w(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Asset root position in the world frame."""
     asset: RigidObject = env.scene[asset_cfg.name]

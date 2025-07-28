@@ -17,8 +17,8 @@ from isaaclab_rl.rsl_rl import (
 @configclass
 class IsaacDroneRacerRunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 500
-    save_interval = 100
+    max_iterations = 5000
+    save_interval = 1000
     experiment_name = "isaac_drone_racer"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
