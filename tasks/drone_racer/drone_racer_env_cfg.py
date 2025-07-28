@@ -107,16 +107,6 @@ class EventCfg:
         },
     )
 
-    randomize_rigid_body_inertia = EventTerm(
-        func=mdp.randomize_rigid_body_inertia,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "inertia_distribution_params": (0.5, 1.5),
-            "operation": "scale",
-        },
-    )
-
     # intervals
     push_robot = EventTerm(
         func=mdp.apply_external_force_torque,
