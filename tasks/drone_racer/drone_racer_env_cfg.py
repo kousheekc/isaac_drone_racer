@@ -10,11 +10,12 @@ import isaaclab.sim as sim_utils
 import torch
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
+
+# from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
-from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
@@ -55,7 +56,7 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         position = ObsTerm(func=mdp.root_pos_w)
-        attitude = ObsTerm(func=mdp.root_rotmat6d_w)
+        attitude = ObsTerm(func=mdp.root_rotmat_w)
         lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
         target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"target_pos": TARGET_POS})
         actions = ObsTerm(func=mdp.last_action)
@@ -84,7 +85,7 @@ class EventCfg:
                 "z": (0.0, 0.0),
                 "roll": (-0.5, 0.5),
                 "pitch": (-0.5, 0.5),
-                "yaw": (-torch.pi / 2, torch.pi / 2),
+                "yaw": (-torch.pi, torch.pi),
             },
             "velocity_range": {
                 "x": (0.0, 0.0),
@@ -97,36 +98,36 @@ class EventCfg:
         },
     )
 
-    randomize_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="body*"),
-            "mass_distribution_params": (0.8, 1.2),
-            "operation": "scale",
-        },
-    )
+    # randomize_mass = EventTerm(
+    #     func=mdp.randomize_rigid_body_mass,
+    #     mode="reset",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="body*"),
+    #         "mass_distribution_params": (0.8, 1.2),
+    #         "operation": "scale",
+    #     },
+    # )
 
-    randomize_inertia = EventTerm(
-        func=mdp.randomize_rigid_body_inertia,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="body"),
-            "inertia_distribution_params": (0.8, 1.2),
-            "operation": "scale",
-        },
-    )
+    # randomize_inertia = EventTerm(
+    #     func=mdp.randomize_rigid_body_inertia,
+    #     mode="reset",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="body"),
+    #         "inertia_distribution_params": (0.8, 1.2),
+    #         "operation": "scale",
+    #     },
+    # )
 
-    # intervals
-    push_robot = EventTerm(
-        func=mdp.apply_external_force_torque,
-        mode="interval",
-        interval_range_s=(0.0, 0.2),
-        params={
-            "force_range": (-0.01, 0.01),
-            "torque_range": (-0.005, 0.005),
-        },
-    )
+    # # intervals
+    # push_robot = EventTerm(
+    #     func=mdp.apply_external_force_torque,
+    #     mode="interval",
+    #     interval_range_s=(0.0, 0.2),
+    #     params={
+    #         "force_range": (-0.01, 0.01),
+    #         "torque_range": (-0.005, 0.005),
+    #     },
+    # )
 
 
 @configclass

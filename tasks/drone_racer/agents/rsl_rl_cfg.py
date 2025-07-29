@@ -19,7 +19,7 @@ class IsaacDroneRacerRunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 5000
     save_interval = 1000
-    experiment_name = "isaac_drone_racer"
+    experiment_name = "hover_no_dr_rotmat"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,

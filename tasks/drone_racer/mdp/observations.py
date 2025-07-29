@@ -67,7 +67,7 @@ def root_rotmat6d_w(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnt
 
     quat = asset.data.root_quat_w
     rotmat = math_utils.matrix_from_quat(quat)
-    rotmat6d = rotmat[:, :, :2].reshape(-1, 6)
+    rotmat6d = rotmat[:, :2, :].reshape(-1, 6)
     # logging purposes
     flat_rotmat = rotmat.view(-1, 9)
     log(env, ["r11", "r12", "r13", "r21", "r22", "r23", "r31", "r32", "r33"], flat_rotmat)
