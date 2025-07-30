@@ -8,19 +8,20 @@
 
 import isaaclab.sim as sim_utils
 import torch
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCollectionCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
-
-# from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 
 from . import mdp
+from .track_generator import generate_track
 
 from assets.five_in_drone import FIVE_IN_DRONE  # isort:skip
 
@@ -30,8 +31,27 @@ TARGET_POS = [0.0, 0.0, 0.5]  # Default target position for flyaway termination
 @configclass
 class DroneRacerSceneCfg(InteractiveSceneCfg):
 
+    # ground plane
+    ground = AssetBaseCfg(
+        prim_path="/World/Ground",
+        spawn=sim_utils.GroundPlaneCfg(),
+    )
+
+    # track
+    track: RigidObjectCollectionCfg = generate_track(
+        track_config={
+            "1": {"pos": (0.0, 1.5, 0.0), "yaw": torch.pi},
+            "2": {"pos": (-1.5, 0.0, 0.0), "yaw": -torch.pi / 2},
+            "3": {"pos": (0.0, -1.5, 0.0), "yaw": 0.0},
+            "4": {"pos": (1.5, 0.0, 0.0), "yaw": torch.pi / 2},
+        }
+    )
+
     # robot
     robot: ArticulationCfg = FIVE_IN_DRONE.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+    # sensors
+    collision_sensor: ContactSensorCfg = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", debug_vis=True)
 
     # lights
     dome_light = AssetBaseCfg(
@@ -58,7 +78,7 @@ class ObservationsCfg:
         position = ObsTerm(func=mdp.root_pos_w)
         attitude = ObsTerm(func=mdp.root_rotmat_w)
         lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
-        target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"target_pos": TARGET_POS})
+        target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"command_name": "target"})
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self) -> None:
@@ -118,6 +138,16 @@ class EventCfg:
     #     },
     # )
 
+    # randomize_twr = EventTerm(
+    #     func=mdp.randomize_twr,
+    #     mode="reset",
+    #     params={
+    #         "action": "control_action",
+    #         "twr_distribution_params": (0.8, 1.2),
+    #         "operation": "scale",
+    #     },
+    # )
+
     # # intervals
     # push_robot = EventTerm(
     #     func=mdp.apply_external_force_torque,
@@ -131,13 +161,28 @@ class EventCfg:
 
 
 @configclass
+class CommandsCfg:
+    """Command specifications for the MDP."""
+
+    target = mdp.GateTargetingCommandCfg(
+        asset_name="robot",
+        track_name="track",
+        randomise_start=None,
+        record_fpv=False,
+        resampling_time_range=(1e9, 1e9),
+        debug_vis=True,
+    )
+
+
+@configclass
 class RewardsCfg:
     """Reward terms for the MDP."""
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
-    pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"target_pos": TARGET_POS, "std": 2.0})
-    action_l2 = RewTerm(func=mdp.action_l2, weight=-5.0)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.1)
+    progress = RewTerm(func=mdp.progress, weight=20.0, params={"command_name": "target"})
+    gate_passed = RewTerm(func=mdp.gate_passed, weight=400.0, params={"command_name": "target"})
+    action_l2 = RewTerm(func=mdp.action_l2, weight=-0.01)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.0001)
     # flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
 
 
@@ -146,17 +191,20 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    flyaway = DoneTerm(func=mdp.flyaway, params={"target_pos": TARGET_POS, "distance": 5.0})
-    flip = DoneTerm(func=mdp.flip, params={"angle": 60.0})
+    flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 5.0})
+    collision = DoneTerm(
+        func=mdp.illegal_contact, params={"sensor_cfg": SceneEntityCfg("collision_sensor"), "threshold": 0.01}
+    )
 
 
 @configclass
 class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=2.0)
+    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=0.0)
     # MDP settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
+    commands: CommandsCfg = CommandsCfg()
     events: EventCfg = EventCfg()
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
@@ -165,9 +213,12 @@ class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self) -> None:
         """Post initialization."""
 
+        self.events.reset_base = None
+        self.commands.target.randomise_start = True
+
         # general settings
         self.decimation = 2
-        self.episode_length_s = 20.0
+        self.episode_length_s = 10.0
         # viewer settings
         self.viewer.eye = (-3.0, -3.0, 3.0)
         self.viewer.lookat = (0.0, 0.0, 1.0)

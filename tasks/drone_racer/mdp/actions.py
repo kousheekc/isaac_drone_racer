@@ -45,7 +45,9 @@ class ControlAction(ActionTerm):
         self._processed_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
-        self.max_thrust = (
+        self._twr_default = torch.full((self.num_envs, 1), self.cfg.thrust_weight_ratio, device=self.device)
+        self._twr = torch.full((self.num_envs, 1), self.cfg.thrust_weight_ratio, device=self.device)
+        self._max_thrust = (
             self._robot.data.default_mass.sum(dim=1, keepdim=True)
             * -self._env.sim.cfg.gravity[-1]
             * self.cfg.thrust_weight_ratio
@@ -79,6 +81,21 @@ class ControlAction(ActionTerm):
     def has_debug_vis_implementation(self) -> bool:
         return False
 
+    @property
+    def twr(self) -> torch.Tensor:
+        """Thrust to weight ratio."""
+        return self._twr
+
+    @twr.setter
+    def twr(self, value: torch.Tensor):
+        """Set thrust to weight ratio."""
+        self._twr = value
+
+    @property
+    def twr_default(self) -> torch.Tensor:
+        """Thrust to weight ratio."""
+        return self._twr_default
+
     """
     Operations.
     """
@@ -100,7 +117,7 @@ class ControlAction(ActionTerm):
 
         mapped = clamped.clone()
         mapped[:, :1] = (mapped[:, :1] + 1) / 2
-        mapped[:, :1] *= self.max_thrust
+        mapped[:, :1] *= self._max_thrust
         mapped[:, 1:] *= torch.tensor(self.cfg.max_ang_vel, device=self.device, dtype=self._raw_actions.dtype)
         mapped[:, 1:] = self._rate_controller.compute_moment(mapped[:, 1:], self._robot.data.root_ang_vel_b)
         log(self._env, ["T", "rate1", "rate2", "rate3"], mapped)

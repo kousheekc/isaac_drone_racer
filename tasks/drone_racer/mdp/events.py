@@ -119,3 +119,35 @@ def randomize_rigid_body_inertia(
 
     # set the inertia tensors into the physics simulation
     asset.root_physx_view.set_inertias(inertias, env_ids)
+
+
+def randomize_twr(
+    env: ManagerBasedEnv,
+    env_ids: torch.Tensor | None,
+    action: str,
+    twr_distribution_params: tuple[float, float],
+    operation: Literal["add", "scale", "abs"],
+    distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform",
+):
+    """Randomize the thrust to weight ratio by adding, scaling, or setting random values."""
+
+    # resolve environment ids
+    if env_ids is None:
+        env_ids = torch.arange(env.scene.num_envs, device="cpu")
+    else:
+        env_ids = env_ids.cpu()
+
+    twr_default = env.action_manager.get_term(action).twr_default
+    twr_current = env.action_manager.get_term(action).twr
+    twr_current[env_ids] = twr_default[env_ids]
+
+    twr_new = _randomize_prop_by_op(
+        twr_current,
+        twr_distribution_params,
+        env_ids,
+        slice(None),
+        operation,
+        distribution,
+    )
+
+    env.action_manager.get_term(action).twr = twr_new
