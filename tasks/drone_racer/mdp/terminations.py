@@ -32,7 +32,7 @@ def flyaway(
     asset: RigidObject = env.scene[asset_cfg.name]
 
     if target_pos is None:
-        target_pos = env.command_manager.get_term(command_name).command[:, :3]
+        target_pos = env.command_manager.get_term(command_name).immediate_target[:, :3]
         target_pos_tensor = target_pos[:, :3]
     else:
         target_pos_tensor = (

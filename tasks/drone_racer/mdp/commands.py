@@ -60,17 +60,18 @@ class GateTargetingCommand(CommandTerm):
         self.num_gates = self.track.num_objects
 
         # create buffers
-        # -- commands: (x, y, z, qw, qx, qy, qz) in simulation world frame
+        # -- commands: (x, y, z, qw, qx, qy, qz) in simulation world frame for next n gates
         self.env_ids = torch.arange(self.num_envs, device=self.device)
         self.prev_robot_pos_w = self.robot.data.root_pos_w
         self._gate_missed = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self._gate_passed = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.next_gate_idx = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
-        self.next_gate_w = torch.zeros(self.num_envs, 7, device=self.device)
+        self.next_n_gates_w = torch.zeros(self.num_envs, self.cfg.n, 7, device=self.device)
 
     def __str__(self) -> str:
         msg = "GateTargetingCommand:\n"
         msg += f"\tCommand dimension: {tuple(self.command.shape[1:])}\n"
+        msg += f"\tNumber of gates in command: {self.cfg.n}\n"
         msg += f"\tResampling time range: {self.cfg.resampling_time_range}\n"
         return msg
 
@@ -80,11 +81,19 @@ class GateTargetingCommand(CommandTerm):
 
     @property
     def command(self) -> torch.Tensor:
-        """The desired pose command. Shape is (num_envs, 7).
+        """The desired pose commands for the next n gates. Shape is (num_envs, n, 7).
 
-        The first three elements correspond to the position, followed by the quaternion orientation in (w, x, y, z).
+        For each gate, the first three elements correspond to the position, followed by the quaternion orientation in (w, x, y, z).
         """
-        return self.next_gate_w
+        return self.next_n_gates_w
+
+    @property
+    def immediate_target(self) -> torch.Tensor:
+        """The immediate target gate (first of the n gates). Shape is (num_envs, 7).
+
+        This is the gate used for gate passing logic and immediate navigation.
+        """
+        return self.next_n_gates_w[:, 0, :]
 
     @property
     def gate_missed(self) -> torch.Tensor:
@@ -160,27 +169,31 @@ class GateTargetingCommand(CommandTerm):
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             self.out.write(image)
 
-        next_gate_positions = self.track.data.object_com_pos_w[self.env_ids, self.next_gate_idx]
-        next_gate_orientations = self.track.data.object_quat_w[self.env_ids, self.next_gate_idx]
-        self.next_gate_w = torch.cat([next_gate_positions, next_gate_orientations], dim=1)
+        # Update next n gates for all environments
+        for i in range(self.cfg.n):
+            gate_idx = (self.next_gate_idx + i) % self.num_gates
+            gate_positions = self.track.data.object_com_pos_w[self.env_ids, gate_idx]
+            gate_orientations = self.track.data.object_quat_w[self.env_ids, gate_idx]
+            self.next_n_gates_w[:, i, :] = torch.cat([gate_positions, gate_orientations], dim=1)
 
-        # Gate passing logic
-        (roll, pitch, yaw) = math_utils.euler_xyz_from_quat(self.next_gate_w[:, 3:7])
+        # Gate passing logic using only the first gate (index 0)
+        first_gate_w = self.next_n_gates_w[:, 0, :]  # Shape: (num_envs, 7)
+        (roll, pitch, yaw) = math_utils.euler_xyz_from_quat(first_gate_w[:, 3:7])
         normal = torch.stack([torch.cos(yaw), torch.sin(yaw)], dim=1)
-        pos_old_projected = (self.prev_robot_pos_w[:, 0] - self.next_gate_w[:, 0]) * normal[:, 0] + (
-            self.prev_robot_pos_w[:, 1] - self.next_gate_w[:, 1]
+        pos_old_projected = (self.prev_robot_pos_w[:, 0] - first_gate_w[:, 0]) * normal[:, 0] + (
+            self.prev_robot_pos_w[:, 1] - first_gate_w[:, 1]
         ) * normal[:, 1]
-        pos_new_projected = (self.robot.data.root_pos_w[:, 0] - self.next_gate_w[:, 0]) * normal[:, 0] + (
-            self.robot.data.root_pos_w[:, 1] - self.next_gate_w[:, 1]
+        pos_new_projected = (self.robot.data.root_pos_w[:, 0] - first_gate_w[:, 0]) * normal[:, 0] + (
+            self.robot.data.root_pos_w[:, 1] - first_gate_w[:, 1]
         ) * normal[:, 1]
         passed_gate_plane = (pos_old_projected < 0) & (pos_new_projected > 0)
 
         self._gate_passed = passed_gate_plane & (
-            torch.all(torch.abs(self.robot.data.root_pos_w - self.next_gate_w[:, :3]) < (self.gate_size / 2), dim=1)
+            torch.all(torch.abs(self.robot.data.root_pos_w - first_gate_w[:, :3]) < (self.gate_size / 2), dim=1)
         )
 
         self._gate_missed = passed_gate_plane & (
-            torch.any(torch.abs(self.robot.data.root_pos_w - self.next_gate_w[:, :3]) > (self.gate_size / 2), dim=1)
+            torch.any(torch.abs(self.robot.data.root_pos_w - first_gate_w[:, :3]) > (self.gate_size / 2), dim=1)
         )
 
         # Update next gate target for the envs that passed the gate
@@ -210,8 +223,9 @@ class GateTargetingCommand(CommandTerm):
         # note: this is needed in-case the robot is de-initialized. we can't access the data
         if not self.robot.is_initialized:
             return
-        # update the markers
-        self.target_visualizer.visualize(self.next_gate_w[:, :3], self.next_gate_w[:, 3:])
+        # update the markers - visualize only the first gate
+        first_gate_w = self.next_n_gates_w[:, 0, :]  # Shape: (num_envs, 7)
+        self.target_visualizer.visualize(first_gate_w[:, :3], first_gate_w[:, 3:])
         self.drone_visualizer.visualize(self.robot.data.root_pos_w, self.robot.data.root_quat_w)
 
 
@@ -235,6 +249,9 @@ class GateTargetingCommandCfg(CommandTermCfg):
 
     gate_size: float = 1.5
     """Size of the gate in meters. This is used to determine if the drone has passed through the gate."""
+
+    n: int = 5
+    """Number of next gates to include in observation."""
 
     target_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/goal_pose")
     """The configuration for the goal pose visualization marker. Defaults to FRAME_MARKER_CFG."""

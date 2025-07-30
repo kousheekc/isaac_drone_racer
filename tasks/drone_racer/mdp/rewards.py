@@ -78,7 +78,7 @@ def progress(
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
 
-    target_pos = env.command_manager.get_term(command_name).command[:, :3]
+    target_pos = env.command_manager.get_term(command_name).immediate_target[:, :3]
     previous_pos = env.command_manager.get_term(command_name).previous_pos
     current_pos = asset.data.root_pos_w
 

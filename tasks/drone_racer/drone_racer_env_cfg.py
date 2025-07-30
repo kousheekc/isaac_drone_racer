@@ -169,6 +169,7 @@ class CommandsCfg:
         track_name="track",
         randomise_start=None,
         record_fpv=False,
+        n=4,
         resampling_time_range=(1e9, 1e9),
         debug_vis=True,
     )

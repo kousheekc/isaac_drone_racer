@@ -153,20 +153,55 @@ def target_pos_b(
     target_pos: list | None = None,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
-    """Position of target in body frame."""
+    """Position of targets in body frame.
+
+    Returns:
+        torch.Tensor: If command_name is used and returns multiple gates (num_envs, n, 7),
+                     this returns flattened relative positions (num_envs, 3*n).
+                     If target_pos is a list or single gate, returns (num_envs, 3).
+    """
 
     asset: RigidObject = env.scene[asset_cfg.name]
 
     if target_pos is None:
-        target_pos = env.command_manager.get_term(command_name).command[:, :3]
-        target_pos_tensor = target_pos[:, :3]
+        target_poses = env.command_manager.get_term(command_name).command  # Shape: (num_envs, n, 7)
+
+        # Check if we have multiple gates (3D tensor) or single gate (2D tensor)
+        if len(target_poses.shape) == 3:
+            # Multiple gates: (num_envs, n, 7)
+            num_envs, num_gates, _ = target_poses.shape
+
+            # Prepare robot poses for broadcasting
+            robot_pos_w = asset.data.root_pos_w  # (num_envs, 3)
+            robot_quat_w = asset.data.root_quat_w  # (num_envs, 4)
+
+            # Initialize output tensor
+            all_pos_b = torch.zeros(num_envs, num_gates, 3, device=asset.device)
+
+            # Compute relative position for each gate
+            for i in range(num_gates):
+                gate_poses = target_poses[:, i, :]  # (num_envs, 7)
+                pos_b, _ = math_utils.subtract_frame_transforms(
+                    robot_pos_w, robot_quat_w, gate_poses[:, :3], gate_poses[:, 3:7]
+                )
+                all_pos_b[:, i, :] = pos_b
+
+            # Flatten to (num_envs, 3*num_gates)
+            pos_b = all_pos_b.view(num_envs, -1)
+        else:
+            # Single gate: (num_envs, 7)
+            pos_b, _ = math_utils.subtract_frame_transforms(
+                asset.data.root_pos_w, asset.data.root_quat_w, target_poses[:, :3], target_poses[:, 3:7]
+            )
+
     else:
         target_pos_tensor = (
             torch.tensor(target_pos, dtype=torch.float32, device=asset.device).repeat(env.num_envs, 1)
             + env.scene.env_origins
         )
-
-    pos_b, _ = math_utils.subtract_frame_transforms(asset.data.root_pos_w, asset.data.root_quat_w, target_pos_tensor)
+        pos_b, _ = math_utils.subtract_frame_transforms(
+            asset.data.root_pos_w, asset.data.root_quat_w, target_pos_tensor
+        )
 
     return pos_b
 
