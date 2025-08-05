@@ -113,7 +113,7 @@ def lookat_next_gate(
 
     drone_pos = asset.data.root_pos_w
     drone_att = asset.data.root_quat_w
-    next_gate_pos = env.command_manager.get_term(command_name).command[:, :3]
+    next_gate_pos = env.command_manager.get_term(command_name).immediate_target[:, :3]
 
     vec_to_gate = next_gate_pos - drone_pos
     vec_to_gate = math_utils.normalize(vec_to_gate)
@@ -132,3 +132,10 @@ def ang_vel_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCf
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
     return torch.sum(torch.square(asset.data.root_ang_vel_b), dim=1)
+
+
+def lin_vel_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize base linear velocity using L2 squared kernel."""
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.sum(torch.square(asset.data.root_lin_vel_b), dim=1)

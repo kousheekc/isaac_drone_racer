@@ -196,8 +196,8 @@ class GateTargetingCommand(CommandTerm):
             torch.any(torch.abs(self.robot.data.root_pos_w - first_gate_w[:, :3]) > (self.gate_size / 2), dim=1)
         )
 
-        # Update next gate target for the envs that passed the gate
-        self.next_gate_idx[self._gate_passed] += 1
+        # Update next gate target for the envs that passed the gate plane (irrespective of whether they passed or missed the gate)
+        self.next_gate_idx[passed_gate_plane] += 1
         self.next_gate_idx = self.next_gate_idx % self.num_gates
 
         self.prev_robot_pos_w = self.robot.data.root_pos_w

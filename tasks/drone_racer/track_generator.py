@@ -23,6 +23,9 @@ def generate_track(track_config: dict | None) -> RigidObjectCollectionCfg:
                         kinematic_enabled=True,
                         disable_gravity=True,
                     ),
+                    collision_props=sim_utils.CollisionPropertiesCfg(
+                        collision_enabled=True,
+                    ),
                     scale=(1.0, 1.0, 1.0),
                 ),
                 init_state=RigidObjectCfg.InitialStateCfg(

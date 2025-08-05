@@ -17,14 +17,14 @@ from isaaclab_rl.rsl_rl import (
 @configclass
 class IsaacDroneRacerRunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 5000
-    save_interval = 1000
-    experiment_name = "racer_no_dr"
+    max_iterations = 1000
+    save_interval = 200
+    experiment_name = "drone_racer_3"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
-        actor_hidden_dims=[256, 256, 256],
-        critic_hidden_dims=[256, 256, 256],
+        actor_hidden_dims=[768, 768, 768, 768],
+        critic_hidden_dims=[768, 768, 768, 768],
         activation="elu",
     )
     algorithm = RslRlPpoAlgorithmCfg(
