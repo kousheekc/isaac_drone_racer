@@ -7,8 +7,7 @@
 # which is licensed under the BSD-3-Clause License.
 
 import isaaclab.sim as sim_utils
-
-# import torch
+import torch
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -63,18 +62,29 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        position = ObsTerm(func=mdp.root_pos_w)
-        attitude = ObsTerm(func=mdp.root_rotmat_w)
-        lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
-        target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"command_name": "target"})
+        pos_t = ObsTerm(func=mdp.root_pos_t, params={"command_name": "target"})
+        att_t = ObsTerm(func=mdp.root_rotmat_t, params={"command_name": "target"})
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self) -> None:
+            self.history_length = 10
             self.enable_corruption = False
             self.concatenate_terms = True
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+
+
+@configclass
+class CommandsCfg:
+    """Command specifications for the MDP."""
+
+    target = mdp.PosCommandCfg(
+        asset_name="robot",
+        resampling_time_range=(1e9, 1e9),
+        debug_vis=True,
+        ranges=mdp.PosCommandCfg.Ranges(pos_x=(-2.0, 2.0), pos_y=(-2.0, 2.0), pos_z=(0.5, 4.0)),
+    )
 
 
 @configclass
@@ -88,79 +98,22 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (1.0, 1.0),
-                "y": (1.0, 1.0),
-                "z": (0.2, 0.2),
-                "roll": (-0.5, 0.5),
-                "pitch": (-0.5, 0.5),
-                "yaw": (-0.5, 0.5),
+                "x": (-2.0, 2.0),
+                "y": (-2.0, 2.0),
+                "z": (0.5, 4.0),
+                "roll": (-torch.pi / 2, torch.pi / 2),
+                "pitch": (-torch.pi / 2, torch.pi / 2),
+                "yaw": (-torch.pi, torch.pi),
             },
             "velocity_range": {
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
+                "x": (-0.2, 0.2),
+                "y": (-0.2, 0.2),
+                "z": (-0.2, 0.2),
+                "roll": (-0.1, 0.1),
+                "pitch": (-0.1, 0.1),
+                "yaw": (-0.1, 0.1),
             },
         },
-    )
-
-    randomize_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="body*"),
-            "mass_distribution_params": (0.8, 1.2),
-            "operation": "scale",
-        },
-    )
-
-    randomize_inertia = EventTerm(
-        func=mdp.randomize_rigid_body_inertia,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="body"),
-            "inertia_distribution_params": (0.8, 1.2),
-            "operation": "scale",
-        },
-    )
-
-    randomize_twr = EventTerm(
-        func=mdp.randomize_twr,
-        mode="reset",
-        params={
-            "action": "control_action",
-            "twr_distribution_params": (0.8, 1.2),
-            "operation": "scale",
-        },
-    )
-
-    # intervals
-    push_robot = EventTerm(
-        func=mdp.apply_external_force_torque,
-        mode="interval",
-        interval_range_s=(0.0, 0.2),
-        params={
-            "force_range": (-0.01, 0.01),
-            "torque_range": (-0.005, 0.005),
-        },
-    )
-
-
-@configclass
-class CommandsCfg:
-    """Command specifications for the MDP."""
-
-    target = mdp.GateTargetingCommandCfg(
-        asset_name="robot",
-        track_name="track",
-        randomise_start=None,
-        record_fpv=False,
-        gate_size=0.5,
-        n=1,
-        resampling_time_range=(1e9, 1e9),
-        debug_vis=True,
     )
 
 
@@ -169,8 +122,8 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-10.0)
-    gate_passed = RewTerm(func=mdp.gate_passed, weight=10.0, params={"command_name": "target"})
-    progress = RewTerm(func=mdp.progress, weight=1.0, params={"command_name": "target"})
+    pos_error_l2 = RewTerm(func=mdp.pos_error_l2, params={"command_name": "target"}, weight=-1.0)
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.1)
 
 
 @configclass
@@ -189,8 +142,8 @@ class HoverEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
     scene: HoverSceneCfg = HoverSceneCfg(num_envs=4096, env_spacing=0.0)
     # MDP settings
-    observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
+    observations: ObservationsCfg = ObservationsCfg()
     commands: CommandsCfg = CommandsCfg()
     events: EventCfg = EventCfg()
     rewards: RewardsCfg = RewardsCfg()
@@ -199,9 +152,6 @@ class HoverEnvCfg(ManagerBasedRLEnvCfg):
     # Post initialization
     def __post_init__(self) -> None:
         """Post initialization."""
-
-        self.events.reset_base = None
-        self.commands.target.randomise_start = True
 
         # general settings
         self.decimation = 2
