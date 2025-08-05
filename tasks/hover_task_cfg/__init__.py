@@ -11,12 +11,12 @@ import gymnasium as gym
 from . import agents
 
 gym.register(
-    id="Isaac-Drone-Racer-v0",
+    id="Hover-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.drone_racer_env_cfg:DroneRacerEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.hover_env_cfg:HoverEnvCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_cfg.yaml",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_cfg:IsaacDroneRacerRunnerCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_cfg:HoverRunnerCfg",
     },
 )

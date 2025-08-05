@@ -6,13 +6,16 @@
 # This project uses the IsaacLab framework (https://github.com/isaac-sim/IsaacLab),
 # which is licensed under the BSD-3-Clause License.
 
+import argparse
+
 import numpy as np
 import onnxruntime as ort
 
-# Path to your ONNX model
-model_path = (
-    "/home/kousheek/Dev/saxion/isaac_drone_racer/logs/rsl_rl/isaac_drone_racer/2025-07-23_23-37-55/exported/policy.onnx"
-)
+parser = argparse.ArgumentParser(description="Run inference with an ONNX model.")
+parser.add_argument("--model_path", type=str, required=True, help="Path to the ONNX model file.")
+args = parser.parse_args()
+
+model_path = args.model_path
 
 # Create ONNX Runtime session (CPU or GPU)
 session = ort.InferenceSession(model_path)

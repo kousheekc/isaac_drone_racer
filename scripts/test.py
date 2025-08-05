@@ -23,11 +23,11 @@ simulation_app = app_launcher.app
 import torch
 from isaaclab.envs import ManagerBasedRLEnv
 
-from tasks.drone_racer.drone_racer_env_cfg import DroneRacerEnvCfg
+from tasks.hover_task_cfg.hover_env_cfg import HoverEnvCfg
 
 
 def main():
-    env_cfg = DroneRacerEnvCfg()
+    env_cfg = HoverEnvCfg()
     env_cfg.scene.num_envs = args_cli.num_envs
 
     env = ManagerBasedRLEnv(cfg=env_cfg)

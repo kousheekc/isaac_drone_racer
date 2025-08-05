@@ -7,8 +7,9 @@
 # which is licensed under the BSD-3-Clause License.
 
 import isaaclab.sim as sim_utils
-import torch
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCollectionCfg
+
+# import torch
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
@@ -21,28 +22,17 @@ from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 
 from . import mdp
-from .track_generator import generate_track
 
 from assets.five_in_drone import FIVE_IN_DRONE  # isort:skip
 
 
 @configclass
-class DroneRacerSceneCfg(InteractiveSceneCfg):
+class HoverSceneCfg(InteractiveSceneCfg):
 
     # ground plane
     ground = AssetBaseCfg(
         prim_path="/World/Ground",
         spawn=sim_utils.GroundPlaneCfg(),
-    )
-
-    # track
-    track: RigidObjectCollectionCfg = generate_track(
-        track_config={
-            "1": {"pos": (0.0, 1.0, 0.0), "yaw": torch.pi},
-            "2": {"pos": (-1.0, 0.0, 0.0), "yaw": -torch.pi / 2},
-            "3": {"pos": (0.0, -1.0, 0.0), "yaw": 0.0},
-            "4": {"pos": (1.0, 0.0, 0.0), "yaw": torch.pi / 2},
-        }
     )
 
     # robot
@@ -195,9 +185,9 @@ class TerminationsCfg:
 
 
 @configclass
-class DroneRacerEnvCfg(ManagerBasedRLEnvCfg):
+class HoverEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: DroneRacerSceneCfg = DroneRacerSceneCfg(num_envs=4096, env_spacing=0.0)
+    scene: HoverSceneCfg = HoverSceneCfg(num_envs=4096, env_spacing=0.0)
     # MDP settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
