@@ -33,23 +33,13 @@ def main():
     env = ManagerBasedRLEnv(cfg=env_cfg)
     env.reset()
 
-    count = 0
-
     while simulation_app.is_running():
         with torch.inference_mode():
-
-            if count % 300 == 0:
-                count = 0
-                env.reset()
-                print("-" * 80)
-                print("[INFO]: Resetting environment...")
-
             actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
             actions[:, :] = 0.0
 
             obs, rew, terminated, truncated, info = env.step(actions)
             # print(rew)
-            count += 1
 
     env.close()
 

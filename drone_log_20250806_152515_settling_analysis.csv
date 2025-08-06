@@ -1,0 +1,2 @@
+start_index,end_index,time_constant,settling_time_95,settling_time_98,time_to_50_percent,time_to_90_percent,initial_value,setpoint_value,response_magnitude,response_direction,r_squared
+0,4952,0.07516631826919237,0.22549895480757712,0.3006652730767695,0.0521013215813622,0.17307684394188838,10.000848489451723,0.0032552966486717647,9.997593192803052,decrease,0.9999925050880506

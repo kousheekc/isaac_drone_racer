@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import csv
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import torch
@@ -55,6 +57,12 @@ class ControlAction(ActionTerm):
             dy=self.cfg.dy,
         ).to(self.device)
 
+        # Initialize CSV logging if num_envs = 1
+        if self.num_envs == 1:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self._csv_file_path = f"drone_log_{timestamp}.csv"
+            self._csv_initialized = False
+
     """
     Properties.
     """
@@ -88,7 +96,7 @@ class ControlAction(ActionTerm):
 
         mapped = clamped.clone()
         mapped[:, :1] = (mapped[:, :1] + 1) / 2
-        mapped[:, :1] *= self.env.sim.cfg.gravity[2] * self.cfg.thrust_weight_ratio
+        mapped[:, :1] *= -1.0 * self.env.sim.cfg.gravity[2] * self.cfg.thrust_weight_ratio
         mapped[:, 1:] *= torch.tensor(self.cfg.max_ang_vel, device=self.device, dtype=self._raw_actions.dtype)
         log(self._env, ["t_d", "w1_d", "w2_d", "w3_d"], clamped)
 
@@ -98,20 +106,96 @@ class ControlAction(ActionTerm):
         lin_vel_b = self._robot.data.root_lin_vel_b
         ang_vel_b = self._robot.data.root_ang_vel_b
 
-        force, moment = self._model(lin_vel_b, ang_vel_b, self._thrust.squeeze(1)[:, -1], self._processed_actions)
+        force, moment = self._model(
+            lin_vel_b, ang_vel_b, self._thrust.squeeze(1)[:, -1].unsqueeze(1), self._processed_actions
+        )
+
+        # print(force)
 
         self._thrust[:] = force.unsqueeze(1)
         self._moment[:] = moment.unsqueeze(1)
 
+        # Log to CSV if num_envs = 1
+        if self.num_envs == 1:
+            self._log_to_csv(ang_vel_b, lin_vel_b, force, moment, self._processed_actions)
+
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
 
         self._elapsed_time += self._env.physics_dt
-        print("Elapsed time:", self._elapsed_time)
+        print(self._elapsed_time)
         log(self._env, ["time"], self._elapsed_time)
+
+    def _log_to_csv(
+        self,
+        ang_vel_b: torch.Tensor,
+        lin_vel_b: torch.Tensor,
+        force: torch.Tensor,
+        moment: torch.Tensor,
+        processed_actions: torch.Tensor,
+    ):
+        """Log drone state and control data to CSV file when num_envs = 1"""
+        # Initialize CSV file with header if not done yet
+        if not self._csv_initialized:
+            with open(self._csv_file_path, "w", newline="") as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow([
+                    "timestamp",
+                    "ang_vel_x",
+                    "ang_vel_y",
+                    "ang_vel_z",
+                    "lin_vel_x",
+                    "lin_vel_y",
+                    "lin_vel_z",
+                    "force_x",
+                    "force_y",
+                    "force_z",
+                    "moment_x",
+                    "moment_y",
+                    "moment_z",
+                    "action_thrust",
+                    "action_roll",
+                    "action_pitch",
+                    "action_yaw",
+                ])
+            self._csv_initialized = True
+
+        # Convert tensors to CPU and extract values for the single environment
+        elapsed_time_value = self._elapsed_time[0, 0].cpu().item()
+        ang_vel_values = ang_vel_b[0].cpu().numpy()  # Shape: (3,)
+        lin_vel_values = lin_vel_b[0].cpu().numpy()  # Shape: (3,)
+        force_values = force[0].cpu().numpy()  # Shape: (3,)
+        moment_values = moment[0].cpu().numpy()  # Shape: (3,)
+        action_values = processed_actions[0].cpu().numpy()  # Shape: (4,)
+
+        # Write data to CSV
+        with open(self._csv_file_path, "a", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([
+                elapsed_time_value,
+                ang_vel_values[0],
+                ang_vel_values[1],
+                ang_vel_values[2],
+                lin_vel_values[0],
+                lin_vel_values[1],
+                lin_vel_values[2],
+                force_values[0],
+                force_values[1],
+                force_values[2],
+                moment_values[0],
+                moment_values[1],
+                moment_values[2],
+                action_values[0],
+                action_values[1],
+                action_values[2],
+                action_values[3],
+            ])
 
     def reset(self, env_ids):
         if env_ids is None or len(env_ids) == self.num_envs:
             env_ids = self._robot._ALL_INDICES
+            # Reset CSV initialization when all environments are reset
+            if self.num_envs == 1:
+                self._csv_initialized = False
 
         self._raw_actions[env_ids] = 0.0
         self._processed_actions[env_ids] = 0.0
@@ -141,15 +225,15 @@ class ControlActionCfg(ActionTermCfg):
 
     asset_name: str = "robot"
     """Name of the asset in the environment for which the commands are generated."""
-    thrust_weight_ratio: float = 2.5
+    thrust_weight_ratio: float = 2.0
     """Thrust weight ratio of the drone."""
     max_ang_vel: list[float] = [3.5, 3.5, 3.5]
     """Maximum angular velocity in rad/s"""
     tau_omega: float = 1000.0
     """Time constant for angular velocity control."""
-    tau_thrust: float = 1000.0
+    tau_thrust: float = 1.0
     """Time constant for thrust control."""
-    dx: float = 0.35
+    dx: float = 0.0
     """Body drag coefficient along x-axis."""
-    dy: float = 0.35
+    dy: float = 0.0
     """Body drag coefficient along y-axis."""

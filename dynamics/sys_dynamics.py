@@ -46,7 +46,7 @@ class SystemDynamics(nn.Module):
         thrust = current_thrust + self.dt * thrust_dot
 
         force_body = torch.stack(
-            [-self.dx * current_v_body[:, 0], -self.dy * current_v_body[:, 1], -thrust.squeeze(-1)], dim=-1
+            [-self.dx * current_v_body[:, 0], -self.dy * current_v_body[:, 1], thrust.squeeze(-1)], dim=-1
         )
 
         moment_body = (omega_cmd - current_omega) / self.tau_omega
