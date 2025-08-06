@@ -11,13 +11,14 @@ import torch.nn as nn
 
 
 class SystemDynamics(nn.Module):
-    def __init__(self, dt, tau_omega, tau_thrust, dx, dy):
+    def __init__(self, dt, tau_omega, tau_thrust, dx, dy, inertia):
         super().__init__()
         self.dt = dt
         self.tau_omega = tau_omega
         self.tau_thrust = tau_thrust
         self.dx = dx
         self.dy = dy
+        self.inertia = inertia
 
     def forward(
         self,
@@ -41,9 +42,12 @@ class SystemDynamics(nn.Module):
         thrust_cmd = action[:, 0:1]
         omega_cmd = action[:, 1:4]
 
-        # First-order actuator lag
+        # First-order actuator lag for thrust
         thrust_dot = (thrust_cmd - current_thrust) / self.tau_thrust
         thrust = current_thrust + self.dt * thrust_dot
+
+        # First-order actuator lag for angular velocity
+        omega_dot = (omega_cmd - current_omega) / self.tau_omega
 
         drag_force_x = -self.dx * current_v_body[:, 0]
         drag_force_y = -self.dy * current_v_body[:, 1]
@@ -51,6 +55,14 @@ class SystemDynamics(nn.Module):
 
         force_body = torch.stack([drag_force_x, drag_force_y, thrust_force_z], dim=-1)
 
-        moment_body = (omega_cmd - current_omega) / self.tau_omega
+        # Calculate physically sound moments using inertia
+        # moment = inertia @ angular_acceleration + gyroscopic_effect
+        inertial_moment = torch.bmm(self.inertia, omega_dot.unsqueeze(-1)).squeeze(-1)
+
+        # Gyroscopic effect: τ_gyro = ω × (I × ω)
+        I_omega = torch.bmm(self.inertia, current_omega.unsqueeze(-1)).squeeze(-1)
+        gyroscopic_moment = torch.cross(current_omega, I_omega, dim=-1)
+
+        moment_body = inertial_moment + gyroscopic_moment
 
         return force_body, moment_body

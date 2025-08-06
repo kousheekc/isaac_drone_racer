@@ -49,6 +49,7 @@ class ControlAction(ActionTerm):
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._mass = self._robot.data.default_mass.sum(dim=1, keepdim=True).to(self.device)
+        self._inertia = self._robot.data.default_inertia[:, 0].view(-1, 3, 3).to(self.device)
 
         self._model = SystemDynamics(
             dt=self.env.physics_dt,
@@ -56,6 +57,7 @@ class ControlAction(ActionTerm):
             tau_thrust=self.cfg.tau_thrust,
             dx=self.cfg.dx,
             dy=self.cfg.dy,
+            inertia=self._inertia,
         ).to(self.device)
 
         # Initialize CSV logging if num_envs = 1
@@ -111,8 +113,6 @@ class ControlAction(ActionTerm):
             lin_vel_b, ang_vel_b, self._thrust.squeeze(1)[:, -1].unsqueeze(1), self._processed_actions
         )
 
-        # print(force)
-
         self._thrust[:] = force.unsqueeze(1)
         self._moment[:] = moment.unsqueeze(1)
 
@@ -123,7 +123,6 @@ class ControlAction(ActionTerm):
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
 
         self._elapsed_time += self._env.physics_dt
-        print(self._elapsed_time)
         log(self._env, ["time"], self._elapsed_time)
 
     def _log_to_csv(
@@ -230,11 +229,11 @@ class ControlActionCfg(ActionTermCfg):
     """Thrust weight ratio of the drone."""
     max_ang_vel: list[float] = [3.5, 3.5, 3.5]
     """Maximum angular velocity in rad/s"""
-    tau_omega: float = 1000.0
+    tau_omega: float = 0.03
     """Time constant for angular velocity control."""
-    tau_thrust: float = 1.0
+    tau_thrust: float = 0.03
     """Time constant for thrust control."""
-    dx: float = 0.0
+    dx: float = 0.35
     """Body drag coefficient along x-axis."""
-    dy: float = 0.0
+    dy: float = 0.35
     """Body drag coefficient along y-axis."""

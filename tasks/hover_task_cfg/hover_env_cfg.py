@@ -7,6 +7,7 @@
 # which is licensed under the BSD-3-Clause License.
 
 import isaaclab.sim as sim_utils
+import torch
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -90,48 +91,25 @@ class EventCfg:
     """Configuration for events."""
 
     # reset
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {
-    #             "x": (-2.0, 2.0),
-    #             "y": (-2.0, 2.0),
-    #             "z": (0.5, 4.0),
-    #             "roll": (-torch.pi / 2, torch.pi / 2),
-    #             "pitch": (-torch.pi / 2, torch.pi / 2),
-    #             "yaw": (-torch.pi, torch.pi),
-    #         },
-    #         "velocity_range": {
-    #             "x": (-0.2, 0.2),
-    #             "y": (-0.2, 0.2),
-    #             "z": (-0.2, 0.2),
-    #             "roll": (-0.1, 0.1),
-    #             "pitch": (-0.1, 0.1),
-    #             "yaw": (-0.1, 0.1),
-    #         },
-    #     },
-    # )
-
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
             "pose_range": {
-                "x": (-0.0, 0.0),
-                "y": (-0.0, 0.0),
-                "z": (1.0, 1.0),
-                "roll": (-0.0, 0.0),
-                "pitch": (-0.0, 0.0),
-                "yaw": (-0.0, 0.0),
+                "x": (-2.0, 2.0),
+                "y": (-2.0, 2.0),
+                "z": (0.5, 4.0),
+                "roll": (-torch.pi / 2, torch.pi / 2),
+                "pitch": (-torch.pi / 2, torch.pi / 2),
+                "yaw": (-torch.pi, torch.pi),
             },
             "velocity_range": {
-                "x": (-0.0, 0.0),
-                "y": (-0.0, 0.0),
-                "z": (-0.0, 0.0),
-                "roll": (10.0, 10.0),
-                "pitch": (10.0, 10.0),
-                "yaw": (10.0, 10.0),
+                "x": (-0.2, 0.2),
+                "y": (-0.2, 0.2),
+                "z": (-0.2, 0.2),
+                "roll": (-0.1, 0.1),
+                "pitch": (-0.1, 0.1),
+                "yaw": (-0.1, 0.1),
             },
         },
     )
