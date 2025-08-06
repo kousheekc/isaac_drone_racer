@@ -11,7 +11,7 @@ import torch.nn as nn
 
 
 class SystemDynamics(nn.Module):
-    def __init__(self, dt=0.01, tau_omega=0.03, tau_thrust=0.03, dx=0.34, dy=0.43):
+    def __init__(self, dt, tau_omega, tau_thrust, dx, dy):
         super().__init__()
         self.dt = dt
         self.tau_omega = tau_omega
@@ -45,9 +45,11 @@ class SystemDynamics(nn.Module):
         thrust_dot = (thrust_cmd - current_thrust) / self.tau_thrust
         thrust = current_thrust + self.dt * thrust_dot
 
-        force_body = torch.stack(
-            [-self.dx * current_v_body[:, 0], -self.dy * current_v_body[:, 1], thrust.squeeze(-1)], dim=-1
-        )
+        drag_force_x = -self.dx * current_v_body[:, 0]
+        drag_force_y = -self.dy * current_v_body[:, 1]
+        thrust_force_z = thrust.squeeze(-1)
+
+        force_body = torch.stack([drag_force_x, drag_force_y, thrust_force_z], dim=-1)
 
         moment_body = (omega_cmd - current_omega) / self.tau_omega
 

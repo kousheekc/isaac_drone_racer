@@ -48,6 +48,7 @@ class ControlAction(ActionTerm):
         self._processed_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
+        self._mass = self._robot.data.default_mass.sum(dim=1, keepdim=True).to(self.device)
 
         self._model = SystemDynamics(
             dt=self.env.physics_dt,
@@ -96,7 +97,7 @@ class ControlAction(ActionTerm):
 
         mapped = clamped.clone()
         mapped[:, :1] = (mapped[:, :1] + 1) / 2
-        mapped[:, :1] *= -1.0 * self.env.sim.cfg.gravity[2] * self.cfg.thrust_weight_ratio
+        mapped[:, :1] *= -1.0 * self.env.sim.cfg.gravity[2] * self._mass * self.cfg.thrust_weight_ratio
         mapped[:, 1:] *= torch.tensor(self.cfg.max_ang_vel, device=self.device, dtype=self._raw_actions.dtype)
         log(self._env, ["t_d", "w1_d", "w2_d", "w3_d"], clamped)
 
