@@ -201,6 +201,7 @@ class ControlAction(ActionTerm):
         self._processed_actions[env_ids] = 0.0
         self._elapsed_time[env_ids] = 0.0
         self._thrust[env_ids] = 0.0
+        self._thrust[env_ids, :, 2] = -1.0 * self.env.sim.cfg.gravity[2] * self._mass
         self._moment[env_ids] = 0.0
 
         self._robot.reset(env_ids)
