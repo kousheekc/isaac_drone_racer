@@ -15,7 +15,8 @@ from isaaclab.assets import Articulation
 from isaaclab.managers import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
 
-# from utils.logger import log
+from dynamics.sys_dynamics import SystemDynamics
+from utils.logger import log
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -35,6 +36,7 @@ class ControlAction(ActionTerm):
         super().__init__(cfg, env)
 
         self.cfg = cfg
+        self.env = env
 
         self._robot: Articulation = env.scene[self.cfg.asset_name]
         self._body_id = self._robot.find_bodies("body")[0]
@@ -44,6 +46,14 @@ class ControlAction(ActionTerm):
         self._processed_actions = torch.zeros(self.num_envs, 4, device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
+
+        self._model = SystemDynamics(
+            dt=self.env.physics_dt,
+            tau_omega=self.cfg.tau_omega,
+            tau_thrust=self.cfg.tau_thrust,
+            dx=self.cfg.dx,
+            dy=self.cfg.dy,
+        ).to(self.device)
 
     """
     Properties.
@@ -70,10 +80,34 @@ class ControlAction(ActionTerm):
     """
 
     def process_actions(self, actions: torch.Tensor):
-        pass
+        self._raw_actions[:] = actions
+        log(self._env, ["a1", "a2", "a3", "a4"], actions)
+
+        clamped = self._raw_actions.clone().clamp_(-1.0, 1.0)
+        log(self._env, ["a1_clamped", "a2_clamped", "a3_clamped", "a4_clamped"], clamped)
+
+        mapped = clamped.clone()
+        mapped[:, :1] = (mapped[:, :1] + 1) / 2
+        mapped[:, :1] *= self.env.sim.cfg.gravity[2] * self.cfg.thrust_weight_ratio
+        mapped[:, 1:] *= torch.tensor(self.cfg.max_ang_vel, device=self.device, dtype=self._raw_actions.dtype)
+        log(self._env, ["t_d", "w1_d", "w2_d", "w3_d"], clamped)
+
+        self._processed_actions[:] = mapped
 
     def apply_actions(self):
-        pass
+        lin_vel_b = self._robot.data.root_lin_vel_b
+        ang_vel_b = self._robot.data.root_ang_vel_b
+
+        force, moment = self._model(lin_vel_b, ang_vel_b, self._thrust.squeeze(1)[:, -1], self._processed_actions)
+
+        self._thrust[:] = force.unsqueeze(1)
+        self._moment[:] = moment.unsqueeze(1)
+
+        self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
+
+        self._elapsed_time += self._env.physics_dt
+        print("Elapsed time:", self._elapsed_time)
+        log(self._env, ["time"], self._elapsed_time)
 
     def reset(self, env_ids):
         if env_ids is None or len(env_ids) == self.num_envs:
@@ -82,6 +116,8 @@ class ControlAction(ActionTerm):
         self._raw_actions[env_ids] = 0.0
         self._processed_actions[env_ids] = 0.0
         self._elapsed_time[env_ids] = 0.0
+        self._thrust[env_ids] = 0.0
+        self._moment[env_ids] = 0.0
 
         self._robot.reset(env_ids)
 
@@ -105,3 +141,15 @@ class ControlActionCfg(ActionTermCfg):
 
     asset_name: str = "robot"
     """Name of the asset in the environment for which the commands are generated."""
+    thrust_weight_ratio: float = 2.5
+    """Thrust weight ratio of the drone."""
+    max_ang_vel: list[float] = [3.5, 3.5, 3.5]
+    """Maximum angular velocity in rad/s"""
+    tau_omega: float = 1000.0
+    """Time constant for angular velocity control."""
+    tau_thrust: float = 1000.0
+    """Time constant for thrust control."""
+    dx: float = 0.35
+    """Body drag coefficient along x-axis."""
+    dy: float = 0.35
+    """Body drag coefficient along y-axis."""

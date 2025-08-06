@@ -92,7 +92,6 @@ class EventCfg:
     """Configuration for events."""
 
     # reset
-    # TODO: Resetting base happens in the command reset also for the moment
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
@@ -140,7 +139,7 @@ class TerminationsCfg:
 @configclass
 class HoverEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: HoverSceneCfg = HoverSceneCfg(num_envs=4096, env_spacing=0.0)
+    scene: HoverSceneCfg = HoverSceneCfg(num_envs=4096, env_spacing=4.0)
     # MDP settings
     actions: ActionsCfg = ActionsCfg()
     observations: ObservationsCfg = ObservationsCfg()
