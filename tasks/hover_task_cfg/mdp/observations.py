@@ -109,3 +109,27 @@ def moment_from_action(
     moment = env.action_manager.get_term("control_action").moment
     log(env, ["mx", "my", "mz"], moment)
     return moment
+
+
+def target_pos_b(
+    env: ManagerBasedRLEnv,
+    command_name: str | None = None,
+    target_pos: list | None = None,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Position of target in body frame."""
+
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    if target_pos is None:
+        target_pos = env.command_manager.get_term(command_name).command[:, :3]
+        target_pos_tensor = target_pos[:, :3]
+    else:
+        target_pos_tensor = (
+            torch.tensor(target_pos, dtype=torch.float32, device=asset.device).repeat(env.num_envs, 1)
+            + env.scene.env_origins
+        )
+
+    pos_b, _ = math_utils.subtract_frame_transforms(asset.data.root_pos_w, asset.data.root_quat_w, target_pos_tensor)
+
+    return pos_b
