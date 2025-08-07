@@ -14,6 +14,7 @@ from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg
@@ -70,8 +71,27 @@ class ObservationsCfg:
             self.enable_corruption = False
             self.concatenate_terms = True
 
+    @configclass
+    class CriticCfg(ObsGroup):
+        """Observations for critic group."""
+
+        position = ObsTerm(func=mdp.root_pos_w)
+        attitude = ObsTerm(func=mdp.root_quat_w)
+        lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
+        ang_vel = ObsTerm(func=mdp.root_ang_vel_b)
+        commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "target"})
+        force = ObsTerm(func=mdp.force_from_action)
+        moment = ObsTerm(func=mdp.moment_from_action)
+        actions = ObsTerm(func=mdp.last_action)
+
+        def __post_init__(self) -> None:
+            self.history_length = 10
+            self.enable_corruption = False
+            self.concatenate_terms = True
+
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+    critic: CriticCfg = CriticCfg()
 
 
 @configclass
@@ -82,7 +102,7 @@ class CommandsCfg:
         asset_name="robot",
         resampling_time_range=(1e9, 1e9),
         debug_vis=True,
-        ranges=mdp.PosCommandCfg.Ranges(pos_x=(-2.0, 2.0), pos_y=(-2.0, 2.0), pos_z=(0.5, 4.0)),
+        ranges=mdp.PosCommandCfg.Ranges(pos_x=(-2.0, 2.0), pos_y=(-2.0, 2.0), pos_z=(0.5, 1.5)),
     )
 
 
@@ -98,9 +118,9 @@ class EventCfg:
             "pose_range": {
                 "x": (-2.0, 2.0),
                 "y": (-2.0, 2.0),
-                "z": (0.5, 4.0),
-                "roll": (-torch.pi / 2, torch.pi / 2),
-                "pitch": (-torch.pi / 2, torch.pi / 2),
+                "z": (0.5, 1.5),
+                "roll": (-torch.pi / 4, torch.pi / 4),
+                "pitch": (-torch.pi / 4, torch.pi / 4),
                 "yaw": (-torch.pi, torch.pi),
             },
             "velocity_range": {
@@ -119,9 +139,12 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    terminating = RewTerm(func=mdp.is_terminated, weight=-10.0)
-    pos_error_l2 = RewTerm(func=mdp.pos_error_l2, params={"command_name": "target"}, weight=-1.0)
-    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.1)
+    terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
+    pos_error_l2 = RewTerm(func=mdp.pos_error_l2, weight=15.0, params={"command_name": "target"})
+    flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-1.0)
+    action_l2 = RewTerm(func=mdp.action_l2, weight=-0.1)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
 
 
 @configclass
@@ -129,10 +152,10 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    # flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 5.0})
-    # collision = DoneTerm(
-    #     func=mdp.illegal_contact, params={"sensor_cfg": SceneEntityCfg("collision_sensor"), "threshold": 0.01}
-    # )
+    flyaway = DoneTerm(func=mdp.flyaway, params={"command_name": "target", "distance": 10.0})
+    collision = DoneTerm(
+        func=mdp.illegal_contact, params={"sensor_cfg": SceneEntityCfg("collision_sensor"), "threshold": 0.01}
+    )
 
 
 @configclass

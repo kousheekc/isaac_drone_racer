@@ -75,3 +75,37 @@ def root_rotmat_t(
     drone_flat_rotmat_t = drone_rotmat_t.view(-1, 9)
 
     return drone_flat_rotmat_t
+
+
+def root_lin_vel_b(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Asset root linear velocity in the body frame."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    lin_vel = asset.data.root_lin_vel_b
+    log(env, ["vx", "vy", "vz"], lin_vel)
+    return lin_vel
+
+
+def root_ang_vel_b(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Asset root angular velocity in the body frame."""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    ang_vel = asset.data.root_ang_vel_b
+    log(env, ["wx", "wy", "wz"], ang_vel)
+    return ang_vel
+
+
+def force_from_action(
+    env: ManagerBasedRLEnv,
+) -> torch.Tensor:
+    """Force from the action."""
+    force = env.action_manager.get_term("control_action").force
+    log(env, ["fx", "fy", "fz"], force)
+    return force
+
+
+def moment_from_action(
+    env: ManagerBasedRLEnv,
+) -> torch.Tensor:
+    """Moment from the action."""
+    moment = env.action_manager.get_term("control_action").moment
+    log(env, ["mx", "my", "mz"], moment)
+    return moment
