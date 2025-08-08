@@ -61,7 +61,19 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"command_name": "target"})
+        target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"command_name": "target"}, history_length=10)
+        rotmat_w = ObsTerm(func=mdp.root_rotmat_w, history_length=10)
+
+        def __post_init__(self) -> None:
+            self.enable_corruption = False
+            self.concatenate_terms = True
+
+    @configclass
+    class CriticCfg(ObsGroup):
+        """Observations for critic group."""
+
+        target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"command_name": "target"}, history_length=10)
+        rotmat_w = ObsTerm(func=mdp.root_rotmat_w, history_length=10)
         lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
         ang_vel = ObsTerm(func=mdp.root_ang_vel_b)
         gravity = ObsTerm(func=mdp.projected_gravity)
@@ -72,6 +84,7 @@ class ObservationsCfg:
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+    critic: CriticCfg = CriticCfg()
 
 
 @configclass
