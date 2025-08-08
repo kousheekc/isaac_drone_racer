@@ -158,11 +158,11 @@ class ControlActionCfg(ActionTermCfg):
     """Thrust weight ratio of the drone."""
     max_ang_vel: list[float] = [3.5, 3.5, 3.5]
     """Maximum angular velocity in rad/s"""
-    tau_omega: float = 0.01
+    tau_omega: float = 0.03
     """Time constant for angular velocity control."""
-    tau_thrust: float = 0.01
+    tau_thrust: float = 0.03
     """Time constant for thrust control."""
-    dx: float = 0.0
+    dx: float = 0.35
     """Body drag coefficient along x-axis."""
-    dy: float = 0.0
+    dy: float = 0.35
     """Body drag coefficient along y-axis."""

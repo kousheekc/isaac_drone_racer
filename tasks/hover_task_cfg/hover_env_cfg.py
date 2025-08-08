@@ -119,12 +119,9 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    # terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
+    terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
     pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"command_name": "target", "std": 0.8})
-    lin_vel_l2 = RewTerm(func=mdp.lin_vel_l2, weight=-0.05)
-    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.01)
-    # action_l2 = RewTerm(func=mdp.action_l2, weight=-0.1)
-    # action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.1)
 
 
 @configclass
@@ -155,11 +152,11 @@ class HoverEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
 
         # general settings
-        self.decimation = 2
+        self.decimation = 4
         self.episode_length_s = 10.0
         # viewer settings
         self.viewer.eye = (-3.0, -3.0, 3.0)
         self.viewer.lookat = (0.0, 0.0, 1.0)
         # simulation settings
-        self.sim.dt = 1 / 100
+        self.sim.dt = 1 / 480
         self.sim.render_interval = self.decimation
