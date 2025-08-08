@@ -127,6 +127,26 @@ class EventCfg:
         },
     )
 
+    randomize_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="body*"),
+            "mass_distribution_params": (0.8, 1.2),
+            "operation": "scale",
+        },
+    )
+
+    randomize_inertia = EventTerm(
+        func=mdp.randomize_rigid_body_inertia,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="body"),
+            "inertia_distribution_params": (0.8, 1.2),
+            "operation": "scale",
+        },
+    )
+
 
 @configclass
 class RewardsCfg:
