@@ -76,6 +76,8 @@ class ObservationsCfg:
         rotmat_w = ObsTerm(func=mdp.root_rotmat_w, history_length=10)
         lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
         ang_vel = ObsTerm(func=mdp.root_ang_vel_b)
+        force = ObsTerm(func=mdp.force_from_action)
+        moment = ObsTerm(func=mdp.moment_from_action)
         gravity = ObsTerm(func=mdp.projected_gravity)
 
         def __post_init__(self) -> None:
@@ -132,7 +134,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="body*"),
-            "mass_distribution_params": (0.8, 1.2),
+            "mass_distribution_params": (0.5, 1.5),
             "operation": "scale",
         },
     )
@@ -142,7 +144,23 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="body"),
-            "inertia_distribution_params": (0.8, 1.2),
+            "inertia_distribution_params": (0.5, 1.5),
+            "operation": "scale",
+        },
+    )
+
+    randomize_control_terms = EventTerm(
+        func=mdp.randomize_control_terms,
+        mode="reset",
+        params={
+            "action": "control_action",
+            "randomization_params": {
+                "twr": (0.5, 1.5),
+                "tau_omega": (0.5, 1.5),
+                "tau_thrust": (0.5, 1.5),
+                "dx": (0.5, 1.5),
+                "dy": (0.5, 1.5),
+            },
             "operation": "scale",
         },
     )

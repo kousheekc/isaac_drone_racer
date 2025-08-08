@@ -75,3 +75,21 @@ def root_ang_vel_b(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnti
     ang_vel = asset.data.root_ang_vel_b
     log(env, ["wx", "wy", "wz"], ang_vel)
     return ang_vel
+
+
+def force_from_action(
+    env: ManagerBasedRLEnv,
+) -> torch.Tensor:
+    """Force from the action."""
+    force = env.action_manager.get_term("control_action").force
+    log(env, ["fx", "fy", "fz"], force)
+    return force
+
+
+def moment_from_action(
+    env: ManagerBasedRLEnv,
+) -> torch.Tensor:
+    """Moment from the action."""
+    moment = env.action_manager.get_term("control_action").moment
+    log(env, ["mx", "my", "mz"], moment)
+    return moment

@@ -49,14 +49,20 @@ class ControlAction(ActionTerm):
 
         self._mass = self._robot.root_physx_view.get_masses().sum(dim=1, keepdim=True).to(self.device)
         self._gravity = torch.tensor(self.env.sim.cfg.gravity, device=self.device).norm()
+
+        self._twr = torch.full((self.num_envs, 1), self.cfg.twr, device=self.device)
+        self._tau_omega = torch.full((self.num_envs, 1), self.cfg.tau_omega, device=self.device)
+        self._tau_thrust = torch.full((self.num_envs, 1), self.cfg.tau_thrust, device=self.device)
+        self._dx = torch.full((self.num_envs, 1), self.cfg.dx, device=self.device)
+        self._dy = torch.full((self.num_envs, 1), self.cfg.dy, device=self.device)
         self._inertia = self._robot.root_physx_view.get_inertias()[:, 0].view(-1, 3, 3).to(self.device)
 
         self._model = SystemDynamics(
             dt=self.env.physics_dt,
-            tau_omega=self.cfg.tau_omega,
-            tau_thrust=self.cfg.tau_thrust,
-            dx=self.cfg.dx,
-            dy=self.cfg.dy,
+            tau_omega=self._tau_omega,
+            tau_thrust=self._tau_thrust,
+            dx=self._dx,
+            dy=self._dy,
             inertia=self._inertia,
         ).to(self.device)
 
@@ -80,6 +86,7 @@ class ControlAction(ActionTerm):
     def has_debug_vis_implementation(self) -> bool:
         return False
 
+    # Observations.
     @property
     def force(self) -> torch.Tensor:
         return self._thrust.squeeze(1)
@@ -87,6 +94,51 @@ class ControlAction(ActionTerm):
     @property
     def moment(self) -> torch.Tensor:
         return self._moment.squeeze(1)
+
+    # Randomization.
+    @property
+    def config(self) -> ControlActionCfg:
+        return self.cfg
+
+    @property
+    def twr(self) -> torch.Tensor:
+        return self._twr
+
+    @property
+    def tau_omega(self) -> torch.Tensor:
+        return self._tau_omega
+
+    @property
+    def tau_thrust(self) -> torch.Tensor:
+        return self._tau_thrust
+
+    @property
+    def dx(self) -> torch.Tensor:
+        return self._dx
+
+    @property
+    def dy(self) -> torch.Tensor:
+        return self._dy
+
+    @twr.setter
+    def twr(self, value: torch.Tensor) -> None:
+        self._twr = value
+
+    @tau_omega.setter
+    def tau_omega(self, value: torch.Tensor) -> None:
+        self._tau_omega = value
+
+    @tau_thrust.setter
+    def tau_thrust(self, value: torch.Tensor) -> None:
+        self._tau_thrust = value
+
+    @dx.setter
+    def dx(self, value: torch.Tensor) -> None:
+        self._dx = value
+
+    @dy.setter
+    def dy(self, value: torch.Tensor) -> None:
+        self._dy = value
 
     """
     Operations.
@@ -101,7 +153,7 @@ class ControlAction(ActionTerm):
 
         mapped = clamped.clone()
         mapped[:, :1] = (mapped[:, :1] + 1) / 2
-        mapped[:, :1] *= self._gravity * self._mass * self.cfg.thrust_weight_ratio
+        mapped[:, :1] *= self._gravity * self._mass * self._twr
         mapped[:, 1:] *= torch.tensor(self.cfg.max_ang_vel, device=self.device, dtype=self._raw_actions.dtype)
         log(self._env, ["t_d", "w1_d", "w2_d", "w3_d"], clamped)
 
@@ -142,6 +194,15 @@ class ControlAction(ActionTerm):
         self._mass = self._robot.root_physx_view.get_masses().sum(dim=1, keepdim=True).to(self.device)
         self._inertia = self._robot.root_physx_view.get_inertias()[:, 0].view(-1, 3, 3).to(self.device)
 
+        self._model = SystemDynamics(
+            dt=self.env.physics_dt,
+            tau_omega=self._tau_omega,
+            tau_thrust=self._tau_thrust,
+            dx=self._dx,
+            dy=self._dy,
+            inertia=self._inertia,
+        ).to(self.device)
+
         # default_root_state = self._robot.data.default_root_state[env_ids]
         # default_root_state[:, :3] += self._env.scene.env_origins[env_ids]
         # self._robot.write_root_state_to_sim(default_root_state, env_ids)
@@ -158,7 +219,7 @@ class ControlActionCfg(ActionTermCfg):
 
     asset_name: str = "robot"
     """Name of the asset in the environment for which the commands are generated."""
-    thrust_weight_ratio: float = 2.5
+    twr: float = 2.5
     """Thrust weight ratio of the drone."""
     max_ang_vel: list[float] = [3.5, 3.5, 3.5]
     """Maximum angular velocity in rad/s"""

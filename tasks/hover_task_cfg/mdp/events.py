@@ -75,3 +75,57 @@ def randomize_rigid_body_inertia(
 
     # set the inertia tensors into the physics simulation
     asset.root_physx_view.set_inertias(inertias, env_ids)
+
+
+def randomize_control_terms(
+    env: ManagerBasedEnv,
+    env_ids: torch.Tensor | None,
+    action: str,
+    randomization_params: dict[str, tuple[float, float]],
+    operation: Literal["add", "scale", "abs"],
+    distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform",
+):
+    """Randomize control terms by adding, scaling, or setting random values.
+
+    Args:
+        env: The environment instance
+        env_ids: Environment IDs to randomize (None for all environments)
+        action: Name of the action term
+        randomization_params: Dictionary mapping parameter names to distribution params.
+                            Keys should match both config attribute names and action term attribute names.
+                            For example: {"twr": (0.8, 1.2), "tau_omega": (0.5, 2.0), ...}
+        operation: Operation to perform ("add", "scale", "abs")
+        distribution: Distribution type for sampling
+    """
+
+    # resolve environment ids
+    if env_ids is None:
+        env_ids = torch.arange(env.scene.num_envs, device="cpu")
+    else:
+        env_ids = env_ids.cpu()
+
+    config = env.action_manager.get_term(action).config
+    action_term = env.action_manager.get_term(action)
+
+    # Loop through each parameter to randomize
+    for param_name, distribution_params in randomization_params.items():
+        # Get default value from config
+        default_value = getattr(config, param_name)
+        term_default = torch.full((env.num_envs, 1), default_value, device=env.device)
+
+        # Get current value from action term
+        term_current = getattr(action_term, param_name)
+        term_current[env_ids] = term_default[env_ids]
+
+        # Randomize the parameter
+        term_new = _randomize_prop_by_op(
+            term_current,
+            distribution_params,
+            env_ids,
+            slice(None),
+            operation,
+            distribution,
+        )
+
+        # Set the new randomized value
+        setattr(action_term, param_name, term_new)

@@ -12,6 +12,15 @@ import torch.nn as nn
 
 class SystemDynamics(nn.Module):
     def __init__(self, dt, tau_omega, tau_thrust, dx, dy, inertia):
+        """
+        Args:
+            dt: time step (float)
+            tau_omega: angular velocity time constant (scalar or tensor of shape (num_envs, 1))
+            tau_thrust: thrust time constant (scalar or tensor of shape (num_envs, 1))
+            dx: drag coefficient in x direction (scalar or tensor of shape (num_envs, 1))
+            dy: drag coefficient in y direction (scalar or tensor of shape (num_envs, 1))
+            inertia: inertia matrix (tensor of shape (num_envs, 3, 3))
+        """
         super().__init__()
         self.dt = dt
         self.tau_omega = tau_omega
@@ -49,8 +58,8 @@ class SystemDynamics(nn.Module):
         # First-order actuator lag for angular velocity
         omega_dot = (omega_cmd - current_omega) / self.tau_omega
 
-        drag_force_x = -self.dx * current_v_body[:, 0]
-        drag_force_y = -self.dy * current_v_body[:, 1]
+        drag_force_x = (-self.dx * current_v_body[:, 0:1]).squeeze(-1)
+        drag_force_y = (-self.dy * current_v_body[:, 1:2]).squeeze(-1)
         thrust_force_z = thrust.squeeze(-1)
 
         force_body = torch.stack([drag_force_x, drag_force_y, thrust_force_z], dim=-1)
