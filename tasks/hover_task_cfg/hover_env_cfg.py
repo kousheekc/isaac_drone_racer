@@ -63,6 +63,7 @@ class ObservationsCfg:
 
         target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"command_name": "target"}, history_length=10)
         rotmat_w = ObsTerm(func=mdp.root_rotmat_w, history_length=10)
+        last_action = ObsTerm(func=mdp.last_action, history_length=10)
 
         def __post_init__(self) -> None:
             self.enable_corruption = False
@@ -74,6 +75,7 @@ class ObservationsCfg:
 
         target_pos_b = ObsTerm(func=mdp.target_pos_b, params={"command_name": "target"}, history_length=10)
         rotmat_w = ObsTerm(func=mdp.root_rotmat_w, history_length=10)
+        last_action = ObsTerm(func=mdp.last_action, history_length=10)
         lin_vel = ObsTerm(func=mdp.root_lin_vel_b)
         ang_vel = ObsTerm(func=mdp.root_ang_vel_b)
         force = ObsTerm(func=mdp.force_from_action)
@@ -134,7 +136,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="body*"),
-            "mass_distribution_params": (0.5, 1.5),
+            "mass_distribution_params": (0.8, 1.2),
             "operation": "scale",
         },
     )
@@ -144,7 +146,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="body"),
-            "inertia_distribution_params": (0.5, 1.5),
+            "inertia_distribution_params": (0.8, 1.2),
             "operation": "scale",
         },
     )
@@ -155,11 +157,11 @@ class EventCfg:
         params={
             "action": "control_action",
             "randomization_params": {
-                "twr": (0.5, 1.5),
-                "tau_omega": (0.5, 1.5),
-                "tau_thrust": (0.5, 1.5),
-                "dx": (0.5, 1.5),
-                "dy": (0.5, 1.5),
+                "twr": (0.8, 1.2),
+                "tau_omega": (0.8, 1.2),
+                "tau_thrust": (0.8, 1.2),
+                "dx": (0.8, 1.2),
+                "dy": (0.8, 1.2),
             },
             "operation": "scale",
         },
@@ -172,7 +174,8 @@ class RewardsCfg:
 
     terminating = RewTerm(func=mdp.is_terminated, weight=-500.0)
     pos_error_tanh = RewTerm(func=mdp.pos_error_tanh, weight=15.0, params={"command_name": "target", "std": 0.8})
-    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.1)
+    ang_vel_l2 = RewTerm(func=mdp.ang_vel_l2, weight=-0.5)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
 
 
 @configclass
